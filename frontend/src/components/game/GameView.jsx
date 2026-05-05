@@ -2,7 +2,11 @@ import { useGame } from '../../context/GameContext'
 import { useGameUI } from '../../hooks/useGameUI'
 import { Die, getRankLabel, diceRank, RANKS } from '../../utils/game'
 import { toast } from 'sonner'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
+
+function randomDie() {
+  return Math.ceil(Math.random() * 6)
+}
 
 export default function GameView() {
   const { state, connected, error, send, onLeave } = useGame()
@@ -11,6 +15,10 @@ export default function GameView() {
   const [challengeAcked, setChallengeAcked] = useState(false)
   const [roundEndAcked, setRoundEndAcked] = useState(false)
   const [justRolled, setJustRolled] = useState(false)
+  const [rolling, setRolling] = useState(false)
+  const [animDice, setAnimDice] = useState(null)
+  const rollTimerRef = useRef(null)
+  const rollIntervalRef = useRef(null)
 
   // Clear justRolled when it's no longer our turn (after raising)
   useEffect(() => {
@@ -18,6 +26,33 @@ export default function GameView() {
       setJustRolled(false)
     }
   }, [state?.turnPlayer, state?.player])
+
+  // Cleanup roll animation on unmount
+  useEffect(() => {
+    return () => {
+      if (rollTimerRef.current) clearTimeout(rollTimerRef.current)
+      if (rollIntervalRef.current) clearInterval(rollIntervalRef.current)
+    }
+  }, [])
+
+  function startRollAnimation() {
+    if (rolling) return
+    setRolling(true)
+    setJustRolled(true)
+
+    rollIntervalRef.current = setInterval(() => {
+      setAnimDice([randomDie(), randomDie()])
+    }, 150)
+
+    rollTimerRef.current = setTimeout(() => {
+      clearInterval(rollIntervalRef.current)
+      rollIntervalRef.current = null
+      setRolling(false)
+      setAnimDice(null)
+    }, 1500)
+
+    doSend({ type: 'roll' })
+  }
 
   if (!state) {
     return (
@@ -129,7 +164,12 @@ export default function GameView() {
 
       {/* Dice Area */}
       <div className="flex-1 flex flex-col items-center justify-center gap-4">
-        {myDice ? (
+        {rolling && animDice ? (
+          <div className="flex gap-4">
+            <Die value={animDice[0]} size={72} />
+            <Die value={animDice[1]} size={72} />
+          </div>
+        ) : myDice ? (
           <div className="flex gap-4">
             <Die value={myDice[0]} size={72} />
             <Die value={myDice[1]} size={72} />
@@ -142,7 +182,7 @@ export default function GameView() {
         )}
 
         {/* Value display */}
-        {myDice && (
+        {myDice && !rolling && (
           <p className="text-2xl font-bold text-white">
             {getRankLabel(diceRank(myDice))}
           </p>
@@ -216,10 +256,7 @@ export default function GameView() {
                 Raise
               </button>
               <button
-                onClick={() => {
-                  setJustRolled(true)
-                  doSend({ type: 'roll' })
-                }}
+                onClick={startRollAnimation}
                 className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors"
               >
                 Roll
