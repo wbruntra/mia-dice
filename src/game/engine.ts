@@ -163,6 +163,7 @@ export function passDice(
       ...state,
       currentClaim: { ...state.currentClaim, player },
       turnPlayer: opponent(player),
+      lastRoller: null,
     },
   }
 }
@@ -271,7 +272,7 @@ export function ackRoundEnd(
 
 export function stateForPlayer(state: GameState, player: Player) {
   const opp = opponent(player)
-  const canSeeDice = state.lastRoller === player
+  const canSeeDice = state.lastRoller === player && state.turnPlayer === player
 
   return {
     id: state.id,

@@ -39,29 +39,40 @@ export function Die({ value, size = 48, hidden = false }) {
   const sz = size
   const dotSz = sz * 0.16
   const dots = DIE_DOTS[value] || []
+
+  if (hidden) {
+    return (
+      <img
+        src="/cards/cardback.webp"
+        alt="Hidden die"
+        className="rounded-lg"
+        style={{ width: sz, height: sz }}
+      />
+    )
+  }
+
   return (
     <div
       className="rounded-lg inline-flex items-center justify-center relative"
       style={{
         width: sz,
         height: sz,
-        background: hidden ? '#1e1b2e' : '#fafafa',
-        border: hidden ? '2px solid #2d2a3e' : '2px solid #e0e0e0',
+        background: '#fafafa',
+        border: '2px solid #e0e0e0',
       }}
     >
-      {!hidden &&
-        dots.map(([r, c], i) => (
-          <div
-            key={i}
-            className="absolute rounded-full bg-neutral-900"
-            style={{
-              width: dotSz,
-              height: dotSz,
-              top: sz * 0.2 + r * sz * 0.27 - dotSz / 2,
-              left: sz * 0.2 + c * sz * 0.27 - dotSz / 2,
-            }}
-          />
-        ))}
+      {dots.map(([r, c], i) => (
+        <div
+          key={i}
+          className="absolute rounded-full bg-neutral-900"
+          style={{
+            width: dotSz,
+            height: dotSz,
+            top: sz * 0.2 + r * sz * 0.27 - dotSz / 2,
+            left: sz * 0.2 + c * sz * 0.27 - dotSz / 2,
+          }}
+        />
+      ))}
     </div>
   )
 }

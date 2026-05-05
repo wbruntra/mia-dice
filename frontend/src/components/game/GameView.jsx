@@ -288,10 +288,7 @@ export default function GameView() {
                 Raise
               </button>
               <button
-                onClick={() => {
-                  setPendingAction('roll_raise')
-                  setShowClaimPicker(true)
-                }}
+                onClick={startRollAnimation}
                 className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors"
               >
                 Roll & Raise
@@ -361,35 +358,94 @@ export default function GameView() {
 }
 
 function ChallengeResultOverlay({ result, myName, opponentName, onAck, acked }) {
+  const [phase, setPhase] = useState('dramatic')
+  const revealed = phase === 'revealing' || phase === 'revealed'
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase('revealing'), 1000)
+    const t2 = setTimeout(() => setPhase('revealed'), 2200)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+    }
+  }, [])
+
   if (!result) return null
+
   const iWon = result.iWon
+
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 max-w-sm w-full text-center">
-        <p className="text-4xl mb-4">{iWon ? '🎉' : '💀'}</p>
-        <p className="text-xl font-bold text-white mb-2">
-          {iWon ? 'You won the challenge!' : 'You lost the challenge!'}
-        </p>
-        <div className="flex justify-center gap-4 my-4">
-          <div className="bg-neutral-800 rounded-xl px-4 py-3">
-            <p className="text-xs text-neutral-400">Claimed</p>
-            <p className="text-2xl font-bold text-amber-400">{result.claimedValue}</p>
-          </div>
-          <div className="bg-neutral-800 rounded-xl px-4 py-3">
-            <p className="text-xs text-neutral-400">Actual</p>
-            <p className="text-2xl font-bold text-white">{result.actualValue}</p>
-          </div>
-        </div>
-        {result.livesLost > 1 && (
-          <p className="text-red-400 text-sm mb-2">Mia! Loser loses {result.livesLost} lives!</p>
+      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 max-w-sm w-full text-center flex flex-col items-center">
+        {/* Phase header */}
+        {phase === 'dramatic' && (
+          <p className="text-2xl font-bold text-white mb-6 animate-pulse">Challenge!</p>
         )}
-        <button
-          onClick={onAck}
-          disabled={acked}
-          className="mt-4 px-6 py-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors disabled:opacity-50"
+        {phase === 'revealing' && (
+          <p className="text-lg font-bold text-amber-400 mb-6 animate-pulse">Revealing...</p>
+        )}
+
+        {/* Dice with cardback overlay */}
+        <div className="flex justify-center gap-6 mb-4">
+          {result.dice.map((value, i) => (
+            <div
+              key={i}
+              className="relative overflow-hidden rounded-lg"
+              style={{ width: 72, height: 72 }}
+            >
+              <Die value={value} size={72} />
+              <img
+                src="/cards/cardback.webp"
+                alt="Hidden die"
+                className="absolute top-0 left-0 rounded-lg"
+                style={{
+                  width: 72,
+                  height: 72,
+                  transition: `transform 0.7s ${i * 0.2}s cubic-bezier(0.4, 0, 0.2, 1)`,
+                  transform: revealed ? 'translateY(-100%)' : 'translateY(0)',
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Result — appears after reveal */}
+        <div
+          className="transition-opacity duration-500 flex flex-col items-center"
+          style={{ opacity: phase === 'revealed' ? 1 : 0 }}
         >
-          {acked ? 'Waiting...' : 'Continue'}
-        </button>
+          {phase === 'revealed' && (
+            <>
+              <p className="text-4xl mb-2">{iWon ? '🎉' : '💀'}</p>
+              <p className="text-xl font-bold text-white mb-4">
+                {iWon ? 'You won the challenge!' : 'You lost the challenge!'}
+              </p>
+              <div className="flex justify-center gap-4 mb-4">
+                <div className="bg-neutral-800 rounded-xl px-4 py-3">
+                  <p className="text-xs text-neutral-400">Claimed</p>
+                  <p className="text-2xl font-bold text-amber-400">{result.claimedValue}</p>
+                </div>
+                <div className="bg-neutral-800 rounded-xl px-4 py-3">
+                  <p className="text-xs text-neutral-400">Actual</p>
+                  <p className="text-2xl font-bold text-white">{result.actualValue}</p>
+                </div>
+              </div>
+              {result.livesLost > 1 && (
+                <p className="text-red-400 text-sm mb-4">Mia! Loser loses {result.livesLost} lives!</p>
+              )}
+              <button
+                onClick={onAck}
+                disabled={acked}
+                className="mt-2 px-6 py-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors disabled:opacity-50"
+              >
+                {acked ? 'Waiting...' : 'Continue'}
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Spacer to prevent layout collapse during animation phases */}
+        {phase !== 'revealed' && <div className="h-32" />}
       </div>
     </div>
   )
