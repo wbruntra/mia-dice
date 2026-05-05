@@ -52,7 +52,6 @@ export default function GameView() {
     setShowClaimPicker(false)
     setPendingAction(null)
     setPendingValue(null)
-    setJustRolled(false)
   }
 
   function handleClaimValue(value) {
@@ -223,7 +222,7 @@ export default function GameView() {
                 }}
                 className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors"
               >
-                Believe & Roll
+                Roll
               </button>
               <button
                 onClick={handlePass}
@@ -310,6 +309,7 @@ export default function GameView() {
       {showClaimPicker && (
         <ClaimPickerModal
           currentClaim={state.currentClaim}
+          myDice={myDice}
           onSelect={handleClaimValue}
           onClose={() => {
             setShowClaimPicker(false)
@@ -401,8 +401,9 @@ function GameOverOverlay({ winner, myName, opponentName, player, onLeave }) {
   )
 }
 
-function ClaimPickerModal({ currentClaim, onSelect, onClose }) {
+function ClaimPickerModal({ currentClaim, myDice, onSelect, onClose }) {
   const minValue = currentClaim ? currentClaim.value + 1 : 0
+  const myRank = myDice ? diceRank(myDice) : -1
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col p-4">
@@ -417,21 +418,27 @@ function ClaimPickerModal({ currentClaim, onSelect, onClose }) {
         </p>
       )}
       <div className="flex-1 overflow-y-auto grid grid-cols-3 gap-2 content-start">
-        {RANKS.filter((r) => r.value >= minValue).map((rank) => (
-          <button
-            key={rank.value}
-            onClick={() => onSelect(rank.value)}
-            className={`py-3 px-2 rounded-xl text-center font-bold text-lg transition-colors ${
-              rank.label === 'Mia'
-                ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                : rank.value >= 14
-                  ? 'bg-neutral-700 hover:bg-neutral-600 text-white'
-                  : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
-            }`}
-          >
-            {rank.label}
-          </button>
-        ))}
+        {RANKS.filter((r) => r.value >= minValue).map((rank) => {
+          const isMyRoll = rank.value === myRank
+          return (
+            <button
+              key={rank.value}
+              onClick={() => onSelect(rank.value)}
+              className={`relative py-3 px-2 rounded-xl text-center font-bold text-lg transition-colors ${
+                rank.label === 'Mia'
+                  ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                  : rank.value >= 14
+                    ? 'bg-neutral-700 hover:bg-neutral-600 text-white'
+                    : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
+              }`}
+            >
+              {rank.label}
+              {isMyRoll && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500" />
+              )}
+            </button>
+          )
+        })}
         {minValue > 20 && (
           <p className="col-span-3 text-center text-neutral-500 py-8">
             No valid claims remaining. Must challenge!

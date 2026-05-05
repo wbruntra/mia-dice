@@ -33,6 +33,7 @@ function parseGame(row: any): GameState {
 
     currentClaim: parseClaim(row.currentClaim),
     originalCaller: row.originalCaller as Player | null,
+    lastRoller: row.lastRoller as Player | null,
     turnPlayer: row.turnPlayer as Player | null,
     roundPhase: row.roundPhase as GameState['roundPhase'],
     roundNumber: row.roundNumber,
@@ -60,6 +61,7 @@ function serializeGame(state: GameState) {
 
     currentClaim: state.currentClaim ? JSON.stringify(state.currentClaim) : null,
     originalCaller: state.originalCaller || null,
+    lastRoller: state.lastRoller || null,
     turnPlayer: state.turnPlayer || null,
     roundPhase: state.roundPhase || null,
     roundNumber: state.roundNumber,

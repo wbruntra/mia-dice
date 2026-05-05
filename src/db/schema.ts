@@ -16,6 +16,7 @@ export const games = sqliteTable('games', {
 
   currentClaim: text('current_claim'),
   originalCaller: text('original_caller'),
+  lastRoller: text('last_roller'),
   turnPlayer: text('turn_player'),
   roundPhase: text('round_phase', {
     enum: ['claim', 'challenge_result', 'round_end', 'game_over'],
