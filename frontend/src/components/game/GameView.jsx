@@ -416,8 +416,11 @@ function ChallengeResultOverlay({ result, onAck }) {
           <p className="text-xs text-neutral-400 uppercase tracking-wide mb-2">Actual</p>
           <div className="flex justify-center gap-3">
             {result.dice.map((value, i) => (
-              <div key={i} className="relative overflow-hidden rounded-lg" style={{ width: 56, height: 56 }}>
-                <Die value={value} size={56} />
+              <div key={i} className="relative overflow-hidden rounded-lg bg-neutral-700" style={{ width: 56, height: 56 }}>
+                {/* Die face hidden until the cardback starts sliding — prevents flash on image load */}
+                <div style={{ visibility: cardbackUp ? 'visible' : 'hidden' }}>
+                  <Die value={value} size={56} />
+                </div>
                 <img
                   src="/cards/cardback.webp"
                   alt=""
