@@ -21,7 +21,7 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
       if (data.error) {
         toast.error(data.error)
       } else {
-        onNavigateToGame(data.gameId, data.playerId)
+        onNavigateToGame(data.gameId, data.playerName)
       }
     } catch (e) {
       toast.error('Failed to create game')
@@ -43,7 +43,7 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
       if (data.error) {
         toast.error(data.error)
       } else {
-        onNavigateToGame(data.gameId, data.playerId)
+        onNavigateToGame(data.gameId, data.playerName)
       }
     } catch (e) {
       toast.error('Failed to join game')

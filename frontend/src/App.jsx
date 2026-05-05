@@ -9,8 +9,8 @@ import GameView from './components/game/GameView'
 function parseRoute() {
   const params = new URLSearchParams(window.location.search)
   const gameId = params.get('game')
-  const playerId = params.get('player')
-  if (gameId && playerId) return { gameId, playerId }
+  const playerName = params.get('player')
+  if (gameId && playerName) return { gameId, playerName }
 
   const joinId = params.get('join')
   if (joinId) return { joinId }
@@ -32,8 +32,8 @@ function useRouter() {
   return route
 }
 
-function navigateToGame(gameId, playerId) {
-  const url = `${window.location.pathname}?game=${encodeURIComponent(gameId)}&player=${encodeURIComponent(playerId)}`
+function navigateToGame(gameId, playerName) {
+  const url = `${window.location.pathname}?game=${encodeURIComponent(gameId)}&player=${encodeURIComponent(playerName)}`
   window.history.pushState(null, '', url)
   window.dispatchEvent(new PopStateEvent('popstate'))
 }
@@ -44,10 +44,10 @@ function navigateToLobby() {
 }
 
 export default function App() {
-  const { gameId, playerId, joinId } = useRouter()
-  const { state, connected, error, send } = useWebSocket(gameId, playerId)
+  const { gameId, playerName, joinId } = useRouter()
+  const { state, connected, error, send } = useWebSocket(gameId, playerName)
 
-  if (!gameId || !playerId) {
+  if (!gameId || !playerName) {
     return (
       <Lobby
         joinId={joinId}
@@ -63,7 +63,7 @@ export default function App() {
 
   return (
     <GameContext.Provider
-      value={{ state, connected, error, send, onLeave: handleLeave, gameId, playerId }}
+      value={{ state, connected, error, send, onLeave: handleLeave, gameId, playerName }}
     >
       <GameUIProvider>
         <Toaster position="top-center" richColors />

@@ -1,17 +1,10 @@
 import {
-  makeClaim,
-  rollDiceAction,
-  passDice,
-  raise,
-  rollAndRaise,
-  resolveChallenge,
-  giveUp,
-  finishChallenge,
-  newRound,
+  applyMove,
+  stateForPlayer,
 } from '../game/engine'
-import type { GameState, Player } from '../game/types'
-import { opponent } from '../game/types'
-import { loadGame, saveGame, appendEvent } from '../db/game-store'
+import type { GameState, StoredMove } from '../game/types'
+import { rollDice } from '../game/types'
+import { insertMove, reconstructState } from '../db/game-store'
 import { broadcast } from './connections'
 
 export type Move =
@@ -53,10 +46,11 @@ function scheduleChallengeAutoAdvance(gameId: string) {
     gameId,
     setTimeout(async () => {
       challengeTimers.delete(gameId)
-      const state = await loadGame(gameId)
-      if (!state || state.roundPhase !== 'challenge_result') return
-      const next = finishChallenge(state)
-      await saveGame(next)
+      const state = await reconstructState(gameId)
+      if (!state || (state.roundPhase !== 'challenge_result' && state.roundPhase !== 'game_over')) return
+      await insertMove(gameId, 'challenge_ack', null)
+      const next = await reconstructState(gameId)
+      if (!next) return
       broadcast(next)
       if (next.roundPhase === 'round_end') scheduleRoundEndAutoAdvance(gameId)
     }, CHALLENGE_ACK_TIMEOUT_MS),
@@ -69,120 +63,85 @@ function scheduleRoundEndAutoAdvance(gameId: string) {
     gameId,
     setTimeout(async () => {
       roundEndTimers.delete(gameId)
-      const state = await loadGame(gameId)
+      const state = await reconstructState(gameId)
       if (!state || state.roundPhase !== 'round_end') return
       if (!state.challengeResult) return
       const loser = state.challengeResult.challengerWins
         ? state.challengeResult.challenged
         : state.challengeResult.challenger
-      const next = newRound(state, opponent(loser))
-      await saveGame(next)
+      const nextRoundDice = rollDice()
+      await insertMove(gameId, 'round_end_ack', null, { nextRoundDice })
+      const next = await reconstructState(gameId)
+      if (!next) return
       broadcast(next)
     }, ROUND_END_ACK_TIMEOUT_MS),
   )
 }
 
+export async function startGame(gameId: string, dice: [number, number]) {
+  await insertMove(gameId, 'game_start', null, { dice })
+  const state = await reconstructState(gameId)
+  if (!state) throw new Error('Failed to reconstruct state after game_start')
+  broadcast(state)
+}
+
+function buildStoredMove(
+  move: Move,
+  player: number,
+): { stored: StoredMove; error?: string } {
+  switch (move.type) {
+    case 'claim':
+      return { stored: { type: 'claim', player, data: { value: move.value } } }
+    case 'roll':
+      return { stored: { type: 'roll', player, data: { dice: rollDice() } } }
+    case 'pass':
+      return { stored: { type: 'pass', player } }
+    case 'raise':
+      return { stored: { type: 'raise', player, data: { value: move.value } } }
+    case 'roll_raise':
+      return { stored: { type: 'roll_raise', player, data: { value: move.value, dice: rollDice() } } }
+    case 'challenge':
+      return { stored: { type: 'challenge', player } }
+    case 'give_up':
+      return { stored: { type: 'give_up', player } }
+    case 'challenge_ack':
+      return { stored: { type: 'challenge_ack', player } }
+    case 'round_end_ack': {
+      const dice = rollDice()
+      return { stored: { type: 'round_end_ack', player, data: { nextRoundDice: dice } } }
+    }
+    default:
+      return { stored: {} as StoredMove, error: `Unknown move type` }
+  }
+}
+
 export async function handleMove(
   gameId: string,
-  state: GameState,
-  player: Player,
+  player: number,
   move: Move,
 ): Promise<{ error: string } | { ok: true }> {
-  switch (move.type) {
-    case 'claim': {
-      const r = makeClaim(state, player, move.value)
-      if (r.error) return { error: r.error }
-      await saveGame(r.state)
-      await appendEvent(gameId, player, 'claim', { value: move.value })
-      broadcast(r.state)
-      return { ok: true }
-    }
+  // Reconstruct current state
+  const state = await reconstructState(gameId)
+  if (!state) return { error: 'Game not found' }
 
-    case 'roll': {
-      const r = rollDiceAction(state, player)
-      if (r.error) return { error: r.error }
-      await saveGame(r.state)
-      await appendEvent(gameId, player, 'roll')
-      broadcast(r.state)
-      return { ok: true }
-    }
+  // Build the stored move (generate dice if needed)
+  const { stored, error: buildError } = buildStoredMove(move, player)
+  if (buildError) return { error: buildError }
 
-    case 'pass': {
-      const r = passDice(state, player)
-      if (r.error) return { error: r.error }
-      await saveGame(r.state)
-      await appendEvent(gameId, player, 'pass')
-      broadcast(r.state)
-      return { ok: true }
-    }
+  // Validate by applying the move to current state
+  const validation = applyMove(state, stored)
+  if (validation.error) return { error: validation.error }
 
-    case 'raise': {
-      const r = raise(state, player, move.value)
-      if (r.error) return { error: r.error }
-      await saveGame(r.state)
-      await appendEvent(gameId, player, 'raise', { value: move.value })
-      broadcast(r.state)
-      return { ok: true }
-    }
+  // Insert the move
+  await insertMove(gameId, stored.type, stored.player !== undefined ? stored.player : null, stored.data)
 
-    case 'roll_raise': {
-      const r = rollAndRaise(state, player, move.value)
-      if (r.error) return { error: r.error }
-      await saveGame(r.state)
-      await appendEvent(gameId, player, 'roll_raise', { value: move.value })
-      broadcast(r.state)
-      return { ok: true }
-    }
+  // Apply to get the new state (same as validation result)
+  broadcast(validation.state)
 
-    case 'challenge': {
-      const r = resolveChallenge(state, player)
-      if ('error' in r) return { error: r.error }
-      await saveGame(r.state)
-      await appendEvent(gameId, player, 'challenge', {
-        claimedValue: r.result.claimedValue,
-        actualValue: r.result.actualValue,
-        challengerWins: r.result.challengerWins,
-        livesLost: r.result.livesLost,
-      })
-      broadcast(r.state)
-      scheduleChallengeAutoAdvance(gameId)
-      return { ok: true }
-    }
-
-    case 'give_up': {
-      const r = giveUp(state, player)
-      if ('error' in r) return { error: r.error }
-      await saveGame(r.state)
-      await appendEvent(gameId, player, 'give_up')
-      broadcast(r.state)
-      scheduleChallengeAutoAdvance(gameId)
-      return { ok: true }
-    }
-
-    case 'challenge_ack': {
-      if (state.roundPhase !== 'challenge_result') return { ok: true }
-      clearChallengeTimer(gameId)
-      const next = finishChallenge(state)
-      await saveGame(next)
-      broadcast(next)
-      if (next.roundPhase === 'round_end') scheduleRoundEndAutoAdvance(gameId)
-      return { ok: true }
-    }
-
-    case 'round_end_ack': {
-      if (state.roundPhase !== 'round_end') return { ok: true }
-      clearRoundEndTimer(gameId)
-      if (!state.challengeResult) return { error: 'No challenge result' }
-      const loser = state.challengeResult.challengerWins
-        ? state.challengeResult.challenged
-        : state.challengeResult.challenger
-      const next = newRound(state, opponent(loser))
-      await saveGame(next)
-      broadcast(next)
-      return { ok: true }
-    }
-
-    default:
-      return { error: `Unknown move type: ${(move as any).type}` }
+  // Schedule auto-advance timers
+  if (validation.state.roundPhase === 'challenge_result') {
+    scheduleChallengeAutoAdvance(gameId)
   }
+
+  return { ok: true }
 }

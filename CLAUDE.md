@@ -10,20 +10,30 @@ bun run dev        # backend :9001 + frontend (Vite)
 ## Project Structure
 
 ```
-index.ts                  # Bun.serve() entry — HTTP routes + WebSocket upgrade
+bin/server.ts              # Bun.serve() entry — HTTP + WebSocket upgrade
+index.ts                   # Hono app (routes)
 src/
-  db/schema.ts            # Drizzle table definitions (source of truth)
-  db/game-store.ts        # DB read/write helpers
+  db/schema.ts            # Drizzle tables: games, game_moves
+  db/game-store.ts        # insertMove, loadMoves, reconstructState
   db/index.ts             # DB connection (mexico.db)
-  game/engine.ts          # Pure game logic (no DB)
-  game/types.ts           # Game types + dice ranking
-  services/game.ts        # Orchestrates engine + DB + WebSocket push
+  game/engine.ts          # Pure game logic + applyMove reducer
+  game/types.ts           # Game types, dice ranking, StoredMove
+  services/game.ts        # handleMove, auto-advance timers, broadcast
   services/connections.ts # WebSocket connection registry
-  routes/games.ts         # HTTP handlers
-  routes/ws.ts            # WebSocket message handlers
+  routes/games.ts         # HTTP: create, join, GET state
+  routes/ws.ts            # WebSocket: join, handle moves
 frontend/                 # React app (Vite)
 drizzle/                  # Migration files (committed, never edit by hand)
 ```
+
+## Architecture: Event Sourcing
+
+State is never mutated in place. Every action is recorded as an immutable `game_moves` row.
+
+- **`games`**: identity + metadata — `id`, `players` (JSON array of names), `winner`, `created_at`
+- **`game_moves`**: append-only event log — `game_id`, `seq`, `type`, `player`, `data` (JSON payload)
+- **State reconstruction**: `reconstructState(gameId)` replays all moves through `applyMove(state, move) → newState`
+- **Identity**: Player names are identifiers. Join validates uniqueness. `players` array maps index 0→p1, 1→p2.
 
 ## Database Migrations
 

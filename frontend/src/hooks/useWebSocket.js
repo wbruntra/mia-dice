@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 const MAX_RECONNECT_DELAY = 10000
 const BASE_RECONNECT_DELAY = 500
 
-export function useWebSocket(gameId, playerId) {
+export function useWebSocket(gameId, playerName) {
   const wsRef = useRef(null)
   const [state, setState] = useState(null)
   const [connected, setConnected] = useState(false)
@@ -11,15 +11,15 @@ export function useWebSocket(gameId, playerId) {
   const reconnectAttemptRef = useRef(0)
   const intentionalCloseRef = useRef(false)
   const gameIdRef = useRef(gameId)
-  const playerIdRef = useRef(playerId)
+  const playerNameRef = useRef(playerName)
 
   useEffect(() => {
     gameIdRef.current = gameId
-    playerIdRef.current = playerId
-  }, [gameId, playerId])
+    playerNameRef.current = playerName
+  }, [gameId, playerName])
 
   useEffect(() => {
-    if (!gameId || !playerId) return
+    if (!gameId || !playerName) return
 
     intentionalCloseRef.current = false
     reconnectAttemptRef.current = 0
@@ -38,7 +38,7 @@ export function useWebSocket(gameId, playerId) {
           JSON.stringify({
             type: 'join',
             gameId: gameIdRef.current,
-            playerId: playerIdRef.current,
+            playerName: playerNameRef.current,
           }),
         )
       }
@@ -86,7 +86,7 @@ export function useWebSocket(gameId, playerId) {
         }
       }
     }
-  }, [gameId, playerId])
+  }, [gameId, playerName])
 
   const send = useCallback((msg) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {

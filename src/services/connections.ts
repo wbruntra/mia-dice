@@ -1,8 +1,8 @@
 import type { ServerWebSocket } from 'bun'
-import type { GameState, Player } from '../game/types'
+import type { GameState } from '../game/types'
 import { stateForPlayer } from '../game/engine'
 
-type PlayerLabel = 'p1' | 'p2'
+type PlayerLabel = number
 
 const connections = new Map<string, Map<PlayerLabel, ServerWebSocket<any>>>()
 

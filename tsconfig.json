@@ -23,8 +23,6 @@
     "noImplicitOverride": true,
 
     // Path aliases
-    "baseUrl": ".",
-    "ignoreDeprecations": "5.0",
     "paths": {
       "~/*": ["./*"]
     },

@@ -90,6 +90,9 @@ export default function GameView() {
   const showActions =
     isMyTurn && state.roundPhase === 'claim' && state.status === 'playing'
 
+  const me = state.playerStates.find(p => p.isMe)
+  const opponent = state.playerStates.find(p => !p.isMe)
+
   function doSend(move) {
     send(move)
     setShowClaimPicker(false)
@@ -162,12 +165,12 @@ export default function GameView() {
       {/* Opponent Area */}
       <div className="flex items-center justify-between bg-pirate-wood/60 rounded-xl p-4 border border-pirate-gold/20 relative z-10">
         <div>
-          <p className="text-sm text-pirate-parchment/70">{state.opponentName}</p>
+          <p className="text-sm text-pirate-parchment/70">{opponent.name}</p>
           <div className="flex gap-0.5 mt-1">
-            {Array.from({ length: state.opponentLives }, (_, i) => (
+            {Array.from({ length: opponent.lives }, (_, i) => (
               <span key={i} className="text-red-500 text-lg">&#9829;</span>
             ))}
-            {Array.from({ length: Math.max(0, 5 - state.opponentLives) }, (_, i) => (
+            {Array.from({ length: Math.max(0, state.startingLives - opponent.lives) }, (_, i) => (
               <span key={`e-${i}`} className="text-pirate-wood-light/50 text-lg">&#9829;</span>
             ))}
           </div>
@@ -176,6 +179,11 @@ export default function GameView() {
           <span className="text-pirate-gold text-xs animate-pulse">Thinking...</span>
         )}
       </div>
+
+      {/* Last action */}
+      {state.lastAction && (
+        <p className="text-white text-sm text-center relative z-10">{state.lastAction}</p>
+      )}
 
       {/* Dice Area */}
       <div className="flex-1 flex flex-col items-center justify-center relative z-10">
@@ -211,7 +219,7 @@ export default function GameView() {
                 </p>
                 <p className="font-pirate text-4xl text-pirate-gold">{currentClaimDisplay}</p>
                 <p className="text-xs text-pirate-parchment/40 mt-0.5">
-                  by {state.currentClaim?.player === state.player ? 'You' : state.opponentName}
+                  by {state.currentClaim?.player === state.player ? 'You' : opponent.name}
                 </p>
               </>
             )}
@@ -223,13 +231,13 @@ export default function GameView() {
       <div className="flex items-center justify-between bg-pirate-wood/60 rounded-xl p-4 border border-pirate-gold/20 relative z-10">
         <div>
           <p className="text-sm font-medium text-pirate-parchment">
-            {state.myName} {isMyTurn && state.roundPhase === 'claim' && '🏴‍☠️'}
+            {me.name} {isMyTurn && state.roundPhase === 'claim' && '🏴‍☠️'}
           </p>
           <div className="flex gap-0.5 mt-1">
-            {Array.from({ length: state.myLives }, (_, i) => (
+            {Array.from({ length: me.lives }, (_, i) => (
               <span key={i} className="text-red-500 text-lg">&#9829;</span>
             ))}
-            {Array.from({ length: Math.max(0, 5 - state.myLives) }, (_, i) => (
+            {Array.from({ length: Math.max(0, state.startingLives - me.lives) }, (_, i) => (
               <span key={`e-${i}`} className="text-pirate-wood-light/50 text-lg">&#9829;</span>
             ))}
           </div>
@@ -242,10 +250,10 @@ export default function GameView() {
         {showActions && isMiaClaim && (
           <>
             <button onClick={handleGiveUp} className="btn-parchment">
-              🏳️ Give Up
+              Give Up
             </button>
             <button onClick={handleChallenge} className="btn-crimson">
-              👀 Look
+              Look
             </button>
           </>
         )}
@@ -258,7 +266,7 @@ export default function GameView() {
             }}
             className="btn-gold"
           >
-            🪙 Make Claim
+            Make Claim
           </button>
         )}
 
@@ -270,7 +278,7 @@ export default function GameView() {
             }}
             className="btn-gold"
           >
-            🪙 Raise
+            Raise
           </button>
         )}
 
@@ -283,19 +291,19 @@ export default function GameView() {
               }}
               className="btn-gold"
             >
-              🪙 Raise
+              Raise
             </button>
             <button
               onClick={startRollAnimation}
               className="btn-ocean"
             >
-              🎲 Roll
+              Roll
             </button>
             <button
               onClick={handlePass}
               className="btn-parchment"
             >
-              📜 Pass
+              Pass
             </button>
             <button
               onClick={handleChallenge}
@@ -315,13 +323,13 @@ export default function GameView() {
               }}
               className="btn-gold"
             >
-              🪙 Raise
+              Raise
             </button>
             <button
               onClick={startRollAnimation}
               className="btn-ocean"
             >
-              ⚓ Roll &amp; Raise
+              Roll &amp; Raise
             </button>
             <button
               onClick={handleChallenge}
@@ -333,7 +341,7 @@ export default function GameView() {
         )}
 
         {!showActions && state.roundPhase === 'claim' && !isMyTurn && hasCurrentClaim && (
-          <p className="text-sm text-pirate-parchment/40 italic">Waiting for {state.opponentName}...</p>
+          <p className="text-sm text-pirate-parchment/40 italic">Waiting for {opponent.name}...</p>
         )}
       </div>
 
@@ -354,9 +362,7 @@ export default function GameView() {
       {state.roundPhase === 'game_over' && (
         <GameOverOverlay
           winner={state.winner}
-          myName={state.myName}
-          opponentName={state.opponentName}
-          player={state.player}
+          playerStates={state.playerStates}
           onLeave={onLeave}
         />
       )}
@@ -516,14 +522,16 @@ function RoundEndOverlay({ result, onAck }) {
   )
 }
 
-function GameOverOverlay({ winner, myName, opponentName, player, onLeave }) {
-  const iWon = winner === player
+function GameOverOverlay({ winner, playerStates, onLeave }) {
+  const me = playerStates.find(p => p.isMe)
+  const opponent = playerStates.find(p => !p.isMe)
+  const iWon = winner === me.name
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
       <div className="bg-pirate-wood-light border border-pirate-gold rounded-2xl p-8 max-w-sm w-full text-center">
         <p className="text-5xl mb-4">{iWon ? '🏆' : '💀'}</p>
         <p className="font-pirate text-3xl text-pirate-gold mb-2">
-          {iWon ? 'You Win!' : `${opponentName} Wins!`}
+          {iWon ? 'You Win!' : `${opponent.name} Wins!`}
         </p>
         <p className="text-pirate-parchment/50 text-sm mb-4">
           {iWon ? 'The seas are yours, captain!' : 'Walk the plank...'}

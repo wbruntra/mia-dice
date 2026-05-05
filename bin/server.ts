@@ -1,5 +1,5 @@
 import app from '../index'
-import { wsOpen, wsMessage, wsClose, type WsData } from '../src/routes/ws'
+import { wsOpen, wsMessage, wsClose, type WsData } from '~/src/routes/ws'
 
 const port = process.env.PORT || 9001
 

@@ -1,4 +1,3 @@
-export type Player = 'p1' | 'p2'
 export type GameStatus = 'waiting' | 'playing' | 'finished'
 export type RoundPhase =
   | 'claim'
@@ -9,43 +8,36 @@ export type RoundPhase =
 export interface GameState {
   id: string
   status: GameStatus
-  player1Id: string
-  player1Name: string
-  player2Id: string | null
-  player2Name: string | null
+  players: string[]
+  startingLives: number
   winner: string | null
 
   dice: [number, number] | null
-  lastRoller: Player | null
-  p1Lives: number
-  p2Lives: number
-
-  currentClaim: { value: number; player: Player } | null
-  originalCaller: Player | null
-  turnPlayer: Player | null
+  lastRoller: number | null
+  lives: number[]
+  currentClaim: { value: number; player: number } | null
+  originalCaller: number | null
+  turnPlayer: number | null
   roundPhase: RoundPhase | null
   roundNumber: number
 
   challengeResult: ChallengeResult | null
-  challengeAcks: Player[]
-  roundEndAcks: Player[]
+  challengeAcks: number[]
+  roundEndAcks: number[]
 
-  cpuPlayer: Player | null
+  lastAction: string | null
+  cpuPlayer: number | null
 }
 
 export interface ChallengeResult {
-  challenger: Player
-  challenged: Player
+  challenger: number
+  challenged: number
   claimedValue: number
   actualValue: number
   dice: [number, number]
   challengerWins: boolean
   livesLost: number
   gaveUp?: boolean
-}
-
-export function opponent(player: Player): Player {
-  return player === 'p1' ? 'p2' : 'p1'
 }
 
 export function rollDice(): [number, number] {
@@ -103,4 +95,10 @@ export function rankDisplay(rank: number): string {
 
 export function isMiaRank(rank: number): boolean {
   return rank === 20
+}
+
+export interface StoredMove {
+  type: string
+  player?: number
+  data?: Record<string, unknown>
 }

@@ -1,35 +1,38 @@
-import type { GameState, Player, ChallengeResult } from './types'
-import { opponent, rollDice, diceRank, rankDisplay, isMiaRank } from './types'
+import type { GameState, ChallengeResult, StoredMove } from './types'
+import { rollDice, diceRank, rankDisplay } from './types'
 
-const STARTING_LIVES = 5
+export function blankState(id: string, players: string[], startingLives: number): GameState {
+  return {
+    id,
+    status: 'waiting',
+    players,
+    startingLives,
+    winner: null,
+    dice: null,
+    lastRoller: null,
+    lives: new Array(players.length).fill(startingLives),
+    currentClaim: null,
+    originalCaller: null,
+    turnPlayer: null,
+    roundPhase: null,
+    roundNumber: 1,
+    challengeResult: null,
+    challengeAcks: [],
+    roundEndAcks: [],
+    lastAction: null,
+    cpuPlayer: null,
+  }
+}
 
-export function newGame(): Pick<
-  GameState,
-  | 'status'
-  | 'turnPlayer'
-  | 'roundPhase'
-  | 'p1Lives'
-  | 'p2Lives'
-  | 'dice'
-  | 'lastRoller'
-  | 'currentClaim'
-  | 'originalCaller'
-  | 'roundNumber'
-  | 'challengeResult'
-  | 'challengeAcks'
-  | 'roundEndAcks'
-> {
-  const dice = rollDice()
+export function newGame(dice: [number, number]): Partial<GameState> {
   return {
     status: 'playing',
-    turnPlayer: 'p1',
+    turnPlayer: 0,
     roundPhase: 'claim',
-    p1Lives: STARTING_LIVES,
-    p2Lives: STARTING_LIVES,
     dice,
-    lastRoller: 'p1',
+    lastRoller: 0,
     currentClaim: null,
-    originalCaller: 'p1',
+    originalCaller: 0,
     roundNumber: 1,
     challengeResult: null,
     challengeAcks: [],
@@ -37,10 +40,10 @@ export function newGame(): Pick<
   }
 }
 
-export function newRound(state: GameState, startingPlayer: Player): GameState {
+export function newRound(state: GameState, startingPlayer: number, dice: [number, number]): GameState {
   return {
     ...state,
-    dice: rollDice(),
+    dice,
     currentClaim: null,
     originalCaller: startingPlayer,
     lastRoller: startingPlayer,
@@ -55,7 +58,7 @@ export function newRound(state: GameState, startingPlayer: Player): GameState {
 
 export function makeClaim(
   state: GameState,
-  player: Player,
+  player: number,
   value: number,
 ): { state: GameState; error?: string } {
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
@@ -69,15 +72,15 @@ export function makeClaim(
       currentClaim: { value, player },
       originalCaller: player,
       lastRoller: player,
-      turnPlayer: opponent(player),
+      turnPlayer: 1 - player,
     },
   }
 }
 
-// Re-roll the dice, look, stay on your turn — must then use raise to claim
 export function rollDiceAction(
   state: GameState,
-  player: Player,
+  player: number,
+  dice: [number, number],
 ): { state: GameState; error?: string } {
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
@@ -87,16 +90,15 @@ export function rollDiceAction(
   return {
     state: {
       ...state,
-      dice: rollDice(),
+      dice,
       lastRoller: player,
     },
   }
 }
 
-// Raise without rolling
 export function raise(
   state: GameState,
-  player: Player,
+  player: number,
   value: number,
 ): { state: GameState; error?: string } {
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
@@ -116,16 +118,16 @@ export function raise(
       currentClaim: { value, player },
       originalCaller: player,
       lastRoller: player,
-      turnPlayer: opponent(player),
+      turnPlayer: 1 - player,
     },
   }
 }
 
-// Re-roll and claim higher (full-circle option: roll & raise in one)
 export function rollAndRaise(
   state: GameState,
-  player: Player,
+  player: number,
   value: number,
+  dice: [number, number],
 ): { state: GameState; error?: string } {
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
@@ -141,18 +143,18 @@ export function rollAndRaise(
   return {
     state: {
       ...state,
-      dice: rollDice(),
+      dice,
       currentClaim: { value, player },
       originalCaller: player,
       lastRoller: player,
-      turnPlayer: opponent(player),
+      turnPlayer: 1 - player,
     },
   }
 }
 
 export function passDice(
   state: GameState,
-  player: Player,
+  player: number,
 ): { state: GameState; error?: string } {
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
@@ -166,7 +168,7 @@ export function passDice(
     state: {
       ...state,
       currentClaim: { ...state.currentClaim, player },
-      turnPlayer: opponent(player),
+      turnPlayer: 1 - player,
       lastRoller: null,
     },
   }
@@ -174,7 +176,7 @@ export function passDice(
 
 export function resolveChallenge(
   state: GameState,
-  challenger: Player,
+  challenger: number,
 ): { state: GameState; result: ChallengeResult } | { state: GameState; error: string } {
   if (state.roundPhase !== 'claim') {
     return { state, error: 'Not in claim phase' }
@@ -194,29 +196,23 @@ export function resolveChallenge(
   let livesLost: number
 
   if (claimedValue === 20) {
-    // Mia claim special rules
     if (actualValue === 20) {
-      // Real Mia — looker loses 2
       challengerWins = false
       livesLost = 2
     } else {
-      // Fake Mia — claimer loses 1
       challengerWins = true
       livesLost = 1
     }
   } else {
-    // Normal challenge
     challengerWins = actualValue < claimedValue
     livesLost = 1
   }
 
-  let nextState = { ...state }
+  let nextState = { ...state, lives: [...state.lives] }
   if (challengerWins) {
-    if (challenged === 'p1') nextState.p1Lives -= livesLost
-    else nextState.p2Lives -= livesLost
+    nextState.lives[challenged] -= livesLost
   } else {
-    if (challenger === 'p1') nextState.p1Lives -= livesLost
-    else nextState.p2Lives -= livesLost
+    nextState.lives[challenger] -= livesLost
   }
 
   const result: ChallengeResult = {
@@ -233,21 +229,20 @@ export function resolveChallenge(
   nextState.challengeResult = result
   nextState.challengeAcks = []
 
-  if (nextState.p1Lives <= 0) {
-    nextState.winner = 'p2'
+  if (nextState.lives[0] <= 0) {
+    nextState.winner = nextState.players[1]
     nextState.status = 'finished'
-  } else if (nextState.p2Lives <= 0) {
-    nextState.winner = 'p1'
+  } else if (nextState.lives[1] <= 0) {
+    nextState.winner = nextState.players[0]
     nextState.status = 'finished'
   }
 
   return { state: nextState, result }
 }
 
-// Give up against a Mia claim — player accepts the claim and loses 1 life
 export function giveUp(
   state: GameState,
-  player: Player,
+  player: number,
 ): { state: GameState; result: ChallengeResult } | { state: GameState; error: string } {
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
@@ -265,39 +260,22 @@ export function giveUp(
     gaveUp: true,
   }
 
-  const nextState = { ...state }
-  if (player === 'p1') nextState.p1Lives -= 1
-  else nextState.p2Lives -= 1
+  const nextState = { ...state, lives: [...state.lives] }
+  nextState.lives[player] -= 1
 
   nextState.roundPhase = 'challenge_result'
   nextState.challengeResult = result
   nextState.challengeAcks = []
 
-  if (nextState.p1Lives <= 0) {
-    nextState.winner = 'p2'
+  if (nextState.lives[0] <= 0) {
+    nextState.winner = nextState.players[1]
     nextState.status = 'finished'
-  } else if (nextState.p2Lives <= 0) {
-    nextState.winner = 'p1'
+  } else if (nextState.lives[1] <= 0) {
+    nextState.winner = nextState.players[0]
     nextState.status = 'finished'
   }
 
   return { state: nextState, result }
-}
-
-export function ackChallenge(
-  state: GameState,
-  player: Player,
-): { state: GameState; bothAcked: boolean; error?: string } {
-  if (state.roundPhase !== 'challenge_result' && state.roundPhase !== 'game_over') {
-    return { state, bothAcked: false, error: 'Not in challenge_result phase' }
-  }
-  const acks = state.challengeAcks.includes(player)
-    ? state.challengeAcks
-    : [...state.challengeAcks, player]
-  return {
-    state: { ...state, challengeAcks: acks },
-    bothAcked: acks.length === 2,
-  }
 }
 
 export function finishChallenge(state: GameState): GameState {
@@ -311,24 +289,7 @@ export function finishChallenge(state: GameState): GameState {
   }
 }
 
-export function ackRoundEnd(
-  state: GameState,
-  player: Player,
-): { state: GameState; bothAcked: boolean; error?: string } {
-  if (state.roundPhase !== 'round_end') {
-    return { state, bothAcked: false, error: 'Not in round_end phase' }
-  }
-  const acks = state.roundEndAcks.includes(player)
-    ? state.roundEndAcks
-    : [...state.roundEndAcks, player]
-  return {
-    state: { ...state, roundEndAcks: acks },
-    bothAcked: acks.length === 2,
-  }
-}
-
-export function stateForPlayer(state: GameState, player: Player) {
-  const opp = opponent(player)
+export function stateForPlayer(state: GameState, player: number) {
   const canSeeDice = state.lastRoller === player && state.turnPlayer === player
 
   return {
@@ -347,8 +308,13 @@ export function stateForPlayer(state: GameState, player: Player) {
     roundNumber: state.roundNumber,
     winner: state.winner,
 
-    myLives: player === 'p1' ? state.p1Lives : state.p2Lives,
-    opponentLives: opp === 'p1' ? state.p1Lives : state.p2Lives,
+    playerStates: state.players.map((name, i) => ({
+      name,
+      lives: state.lives[i],
+      isMe: i === player,
+    })),
+
+    startingLives: state.startingLives,
 
     dice: canSeeDice ? state.dice : null,
     diceDisplay: canSeeDice && state.dice ? rankDisplay(diceRank(state.dice)) : null,
@@ -376,8 +342,105 @@ export function stateForPlayer(state: GameState, player: Player) {
     roundEndAcks: state.roundEndAcks,
 
     player,
-    myName: player === 'p1' ? state.player1Name : state.player2Name!,
-    opponentName: opp === 'p1' ? state.player1Name : state.player2Name,
     cpuPlayer: state.cpuPlayer,
+    lastAction: state.lastAction,
+  }
+}
+
+// --- Event sourcing reducer ---
+
+export function applyMove(
+  state: GameState,
+  move: StoredMove,
+): { state: GameState; error?: string } {
+  const player = move.player
+
+  switch (move.type) {
+    case 'game_start': {
+      const { dice } = (move.data || {}) as { dice?: [number, number] }
+      if (!dice) return { state, error: 'game_start missing dice' }
+      return { state: { ...state, ...newGame(dice), lastAction: 'Game started' } }
+    }
+
+    case 'claim': {
+      if (player === undefined) return { state, error: 'Missing player for claim' }
+      const { value } = (move.data || {}) as { value?: number }
+      if (value === undefined) return { state, error: 'claim missing value' }
+      const r = makeClaim(state, player, value)
+      if (r.error) return r
+      return { state: { ...r.state, lastAction: `${state.players[player]} claimed ${rankDisplay(value)}` } }
+    }
+
+    case 'roll': {
+      if (player === undefined) return { state, error: 'Missing player for roll' }
+      const { dice } = (move.data || {}) as { dice?: [number, number] }
+      if (!dice) return { state, error: 'roll missing dice' }
+      const r = rollDiceAction(state, player, dice)
+      if (r.error) return r
+      return { state: { ...r.state, lastAction: `${state.players[player]} rolled the dice` } }
+    }
+
+    case 'pass': {
+      if (player === undefined) return { state, error: 'Missing player for pass' }
+      const r = passDice(state, player)
+      if (r.error) return r
+      return { state: { ...r.state, lastAction: `${state.players[player]} passed` } }
+    }
+
+    case 'raise': {
+      if (player === undefined) return { state, error: 'Missing player for raise' }
+      const { value } = (move.data || {}) as { value?: number }
+      if (value === undefined) return { state, error: 'raise missing value' }
+      const r = raise(state, player, value)
+      if (r.error) return r
+      return { state: { ...r.state, lastAction: `${state.players[player]} raised to ${rankDisplay(value)}` } }
+    }
+
+    case 'roll_raise': {
+      if (player === undefined) return { state, error: 'Missing player for roll_raise' }
+      const { value, dice } = (move.data || {}) as { value?: number; dice?: [number, number] }
+      if (value === undefined) return { state, error: 'roll_raise missing value' }
+      if (!dice) return { state, error: 'roll_raise missing dice' }
+      const r = rollAndRaise(state, player, value, dice)
+      if (r.error) return r
+      return { state: { ...r.state, lastAction: `${state.players[player]} rolled and raised to ${rankDisplay(value)}` } }
+    }
+
+    case 'challenge': {
+      if (player === undefined) return { state, error: 'Missing player for challenge' }
+      const result = resolveChallenge(state, player)
+      if ('error' in result) return result
+      return { state: result.state }
+    }
+
+    case 'give_up': {
+      if (player === undefined) return { state, error: 'Missing player for give_up' }
+      const result = giveUp(state, player)
+      if ('error' in result) return result
+      return { state: { ...result.state, lastAction: `${state.players[player]} gave up against Mia` } }
+    }
+
+    case 'challenge_ack': {
+      if (state.roundPhase !== 'challenge_result' && state.roundPhase !== 'game_over') {
+        return { state, error: 'Not in challenge_result phase' }
+      }
+      return { state: { ...finishChallenge(state), lastAction: state.lastAction } }
+    }
+
+    case 'round_end_ack': {
+      if (state.roundPhase !== 'round_end') {
+        return { state, error: 'Not in round_end phase' }
+      }
+      if (!state.challengeResult) return { state, error: 'No challenge result' }
+      const { nextRoundDice } = (move.data || {}) as { nextRoundDice?: [number, number] }
+      if (!nextRoundDice) return { state, error: 'round_end_ack missing nextRoundDice' }
+      const loser = state.challengeResult.challengerWins
+        ? state.challengeResult.challenged
+        : state.challengeResult.challenger
+      return { state: { ...newRound(state, 1 - loser, nextRoundDice), lastAction: 'New round started' } }
+    }
+
+    default:
+      return { state, error: `Unknown move type: ${move.type}` }
   }
 }
