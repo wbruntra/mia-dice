@@ -1,6 +1,6 @@
 import {
   makeClaim,
-  believeAndRoll,
+  rollDiceAction,
   passDice,
   raise,
   rollAndRaise,
@@ -17,7 +17,7 @@ import { broadcast } from './connections'
 
 export type Move =
   | { type: 'claim'; value: number }
-  | { type: 'believe_roll'; value: number }
+  | { type: 'roll' }
   | { type: 'pass' }
   | { type: 'raise'; value: number }
   | { type: 'roll_raise'; value: number }
@@ -103,11 +103,11 @@ export async function handleMove(
       return { ok: true }
     }
 
-    case 'believe_roll': {
-      const r = believeAndRoll(state, player, move.value)
+    case 'roll': {
+      const r = rollDiceAction(state, player)
       if (r.error) return { error: r.error }
       await saveGame(r.state)
-      await appendEvent(gameId, player, 'believe_roll', { value: move.value })
+      await appendEvent(gameId, player, 'roll')
       broadcast(r.state)
       return { ok: true }
     }

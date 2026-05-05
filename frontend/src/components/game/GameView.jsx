@@ -2,7 +2,7 @@ import { useGame } from '../../context/GameContext'
 import { useGameUI } from '../../hooks/useGameUI'
 import { Die, getRankLabel, diceRank, RANKS } from '../../utils/game'
 import { toast } from 'sonner'
-import { useState } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 export default function GameView() {
   const { state, connected, error, send, onLeave } = useGame()
@@ -10,6 +10,14 @@ export default function GameView() {
     useGameUI()
   const [challengeAcked, setChallengeAcked] = useState(false)
   const [roundEndAcked, setRoundEndAcked] = useState(false)
+  const [justRolled, setJustRolled] = useState(false)
+
+  // Clear justRolled when it's no longer our turn (after raising)
+  useEffect(() => {
+    if (state && state.turnPlayer !== state.player) {
+      setJustRolled(false)
+    }
+  }, [state?.turnPlayer, state?.player])
 
   if (!state) {
     return (
@@ -22,19 +30,9 @@ export default function GameView() {
   }
 
   if (state.status === 'waiting') {
+    const joinUrl = `${window.location.origin}${window.location.pathname}?join=${state.id}`
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-4">
-        <p className="text-xl font-bold text-white">Game Created</p>
-        <p className="text-neutral-400 text-sm">Share this code with your opponent:</p>
-        <p className="text-3xl font-mono font-bold text-amber-400">{state.id}</p>
-        <p className="text-neutral-500 text-sm">Waiting for opponent to join...</p>
-        <button
-          onClick={onLeave}
-          className="mt-4 px-6 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 rounded-xl transition-colors"
-        >
-          Leave
-        </button>
-      </div>
+      <WaitingRoom gameId={state.id} joinUrl={joinUrl} onLeave={onLeave} />
     )
   }
 
@@ -54,13 +52,12 @@ export default function GameView() {
     setShowClaimPicker(false)
     setPendingAction(null)
     setPendingValue(null)
+    setJustRolled(false)
   }
 
   function handleClaimValue(value) {
     if (pendingAction === 'claim') {
       doSend({ type: 'claim', value })
-    } else if (pendingAction === 'believe_roll') {
-      doSend({ type: 'believe_roll', value })
     } else if (pendingAction === 'raise') {
       doSend({ type: 'raise', value })
     } else if (pendingAction === 'roll_raise') {
@@ -196,12 +193,33 @@ export default function GameView() {
             </button>
           )}
 
-          {hasCurrentClaim && !isOriginalCaller && (
+          {hasCurrentClaim && justRolled && (
+            <button
+              onClick={() => {
+                setPendingAction('raise')
+                setShowClaimPicker(true)
+              }}
+              className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
+            >
+              Raise
+            </button>
+          )}
+
+          {hasCurrentClaim && !justRolled && !isOriginalCaller && (
             <>
               <button
                 onClick={() => {
-                  setPendingAction('believe_roll')
+                  setPendingAction('raise')
                   setShowClaimPicker(true)
+                }}
+                className="px-4 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
+              >
+                Raise
+              </button>
+              <button
+                onClick={() => {
+                  setJustRolled(true)
+                  doSend({ type: 'roll' })
                 }}
                 className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors"
               >
@@ -222,7 +240,7 @@ export default function GameView() {
             </>
           )}
 
-          {hasCurrentClaim && isOriginalCaller && (
+          {hasCurrentClaim && !justRolled && isOriginalCaller && (
             <>
               <button
                 onClick={() => {
@@ -420,6 +438,53 @@ function ClaimPickerModal({ currentClaim, onSelect, onClose }) {
           </p>
         )}
       </div>
+    </div>
+  )
+}
+
+function WaitingRoom({ gameId, joinUrl, onLeave }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(joinUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+      toast.success('Link copied!')
+    } catch {
+      // fallback for non-HTTPS
+      toast.error('Failed to copy')
+    }
+  }, [joinUrl])
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
+      <p className="text-xl font-bold text-white">Game Created</p>
+      <p className="text-neutral-400 text-sm">Share this link with your opponent:</p>
+
+      <div className="w-full max-w-sm bg-neutral-900 border border-neutral-700 rounded-xl p-3 flex items-center gap-2">
+        <p className="flex-1 text-sm font-mono text-amber-400 truncate">{joinUrl}</p>
+        <button
+          onClick={handleCopy}
+          className={`shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+            copied
+              ? 'bg-emerald-600 text-white'
+              : 'bg-neutral-700 hover:bg-neutral-600 text-neutral-300'
+          }`}
+        >
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+
+      <p className="text-neutral-600 text-xs">or code: <span className="font-mono text-neutral-400">{gameId}</span></p>
+
+      <p className="text-neutral-500 text-sm">Waiting for opponent to join...</p>
+      <button
+        onClick={onLeave}
+        className="mt-4 px-6 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 rounded-xl transition-colors"
+      >
+        Leave
+      </button>
     </div>
   )
 }

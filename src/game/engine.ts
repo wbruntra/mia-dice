@@ -1,5 +1,5 @@
 import type { GameState, Player, ChallengeResult } from './types'
-import { opponent, rollDice, rankKey, diceRank, rankLabel, rankDisplay, isMiaRank } from './types'
+import { opponent, rollDice, diceValue, diceRank, rankDisplay, isMiaRank } from './types'
 
 const STARTING_LIVES = 3
 
@@ -11,6 +11,7 @@ export function newGame(): Pick<
   | 'p1Lives'
   | 'p2Lives'
   | 'dice'
+  | 'lastRoller'
   | 'currentClaim'
   | 'originalCaller'
   | 'roundNumber'
@@ -26,6 +27,7 @@ export function newGame(): Pick<
     p1Lives: STARTING_LIVES,
     p2Lives: STARTING_LIVES,
     dice,
+    lastRoller: 'p1',
     currentClaim: null,
     originalCaller: 'p1',
     roundNumber: 1,
@@ -41,6 +43,7 @@ export function newRound(state: GameState, startingPlayer: Player): GameState {
     dice: rollDice(),
     currentClaim: null,
     originalCaller: startingPlayer,
+    lastRoller: startingPlayer,
     turnPlayer: startingPlayer,
     roundPhase: 'claim',
     roundNumber: state.roundNumber + 1,
@@ -50,7 +53,6 @@ export function newRound(state: GameState, startingPlayer: Player): GameState {
   }
 }
 
-// First move: roll, look, announce any value (can be truth, higher lie, or lower lie)
 export function makeClaim(
   state: GameState,
   player: Player,
@@ -66,61 +68,31 @@ export function makeClaim(
       ...state,
       currentClaim: { value, player },
       originalCaller: player,
+      lastRoller: player,
       turnPlayer: opponent(player),
     },
   }
 }
 
-// Believe & roll: re-roll, look, must claim higher
-export function believeAndRoll(
+// Re-roll the dice, look, stay on your turn — must then use raise to claim
+export function rollDiceAction(
   state: GameState,
   player: Player,
-  value: number,
 ): { state: GameState; error?: string } {
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
-  if (!state.currentClaim) return { state, error: 'No claim to raise' }
-  if (value <= state.currentClaim.value) {
-    return {
-      state,
-      error: `Must claim higher than ${rankDisplay(state.currentClaim.value)}`,
-    }
-  }
+  if (!state.currentClaim) return { state, error: 'No claim to roll against' }
 
   return {
     state: {
       ...state,
       dice: rollDice(),
-      currentClaim: { value, player },
-      originalCaller: player,
-      turnPlayer: opponent(player),
+      lastRoller: player,
     },
   }
 }
 
-// Pass without looking: take responsibility for current claim
-// Cannot pass if you're the original caller (full circle)
-export function passDice(
-  state: GameState,
-  player: Player,
-): { state: GameState; error?: string } {
-  if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
-  if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
-  if (!state.currentClaim) return { state, error: 'No active claim' }
-  if (state.originalCaller === player) {
-    return { state, error: 'Dice returned — must challenge or raise' }
-  }
-
-  return {
-    state: {
-      ...state,
-      currentClaim: { ...state.currentClaim, player },
-      turnPlayer: opponent(player),
-    },
-  }
-}
-
-// Raise without rolling (only when full circle — original caller can't pass)
+// Raise without rolling
 export function raise(
   state: GameState,
   player: Player,
@@ -141,12 +113,13 @@ export function raise(
       ...state,
       currentClaim: { value, player },
       originalCaller: player,
+      lastRoller: player,
       turnPlayer: opponent(player),
     },
   }
 }
 
-// Re-roll and raise (full circle option)
+// Re-roll and claim higher (full-circle option: roll & raise in one)
 export function rollAndRaise(
   state: GameState,
   player: Player,
@@ -168,6 +141,27 @@ export function rollAndRaise(
       dice: rollDice(),
       currentClaim: { value, player },
       originalCaller: player,
+      lastRoller: player,
+      turnPlayer: opponent(player),
+    },
+  }
+}
+
+export function passDice(
+  state: GameState,
+  player: Player,
+): { state: GameState; error?: string } {
+  if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
+  if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
+  if (!state.currentClaim) return { state, error: 'No active claim' }
+  if (state.originalCaller === player) {
+    return { state, error: 'Dice returned — must challenge or raise' }
+  }
+
+  return {
+    state: {
+      ...state,
+      currentClaim: { ...state.currentClaim, player },
       turnPlayer: opponent(player),
     },
   }
@@ -191,10 +185,8 @@ export function resolveChallenge(
     return { state, error: 'Cannot challenge your own claim' }
   }
 
-  // actual >= claimed means the claim was truthful (or understated)
   const challengerWins = actualValue < claimedValue
 
-  // Mia rule: if 21 is involved, loser loses 2 lives
   let livesLost = 1
   if (isMiaRank(claimedValue) || isMiaRank(actualValue)) {
     livesLost = 2
@@ -279,6 +271,7 @@ export function ackRoundEnd(
 
 export function stateForPlayer(state: GameState, player: Player) {
   const opp = opponent(player)
+  const canSeeDice = state.lastRoller === player
 
   return {
     id: state.id,
@@ -299,17 +292,10 @@ export function stateForPlayer(state: GameState, player: Player) {
     myLives: player === 'p1' ? state.p1Lives : state.p2Lives,
     opponentLives: opp === 'p1' ? state.p1Lives : state.p2Lives,
 
-    // Only show dice to the player who last rolled and knows them.
-    // In the shared-dice model, we track who knows via originalCaller.
-    // Actually: the dice are known only if the player was the last to roll.
-    // The originalCaller always knows the dice (within a claim cycle).
-    // For simplicity: show if this player was the last caller who created a new claim.
-    dice: player === state.originalCaller ? state.dice : null,
-    diceDisplay: player === state.originalCaller && state.dice
-      ? rankDisplay(diceRank(state.dice))
-      : null,
+    dice: canSeeDice ? state.dice : null,
+    diceDisplay: canSeeDice && state.dice ? rankDisplay(diceRank(state.dice)) : null,
 
-    canPass: state.originalCaller !== player,
+    canPass: state.originalCaller !== player && state.roundPhase === 'claim',
 
     challengeResult: state.challengeResult
       ? {
