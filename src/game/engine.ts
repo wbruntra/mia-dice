@@ -219,11 +219,9 @@ export function resolveChallenge(
   if (nextState.p1Lives <= 0) {
     nextState.winner = 'p2'
     nextState.status = 'finished'
-    nextState.roundPhase = 'game_over'
   } else if (nextState.p2Lives <= 0) {
     nextState.winner = 'p1'
     nextState.status = 'finished'
-    nextState.roundPhase = 'game_over'
   }
 
   return { state: nextState, result }
@@ -246,7 +244,9 @@ export function ackChallenge(
 }
 
 export function finishChallenge(state: GameState): GameState {
-  if (state.status === 'finished') return state
+  if (state.status === 'finished') {
+    return { ...state, roundPhase: 'game_over' }
+  }
   return {
     ...state,
     roundPhase: 'round_end',

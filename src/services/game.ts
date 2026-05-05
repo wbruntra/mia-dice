@@ -5,9 +5,7 @@ import {
   raise,
   rollAndRaise,
   resolveChallenge,
-  ackChallenge,
   finishChallenge,
-  ackRoundEnd,
   newRound,
 } from '../game/engine'
 import type { GameState, Player } from '../game/types'
@@ -25,8 +23,8 @@ export type Move =
   | { type: 'challenge_ack' }
   | { type: 'round_end_ack' }
 
-const CHALLENGE_ACK_TIMEOUT_MS = 15000
-const ROUND_END_ACK_TIMEOUT_MS = 12000
+const CHALLENGE_ACK_TIMEOUT_MS = 5000
+const ROUND_END_ACK_TIMEOUT_MS = 4000
 
 const challengeTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const roundEndTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -54,12 +52,7 @@ function scheduleChallengeAutoAdvance(gameId: string) {
     setTimeout(async () => {
       challengeTimers.delete(gameId)
       const state = await loadGame(gameId)
-      if (
-        !state ||
-        (state.roundPhase !== 'challenge_result' && state.roundPhase !== 'game_over')
-      )
-        return
-      if (state.status === 'finished') return
+      if (!state || state.roundPhase !== 'challenge_result') return
       const next = finishChallenge(state)
       await saveGame(next)
       broadcast(next)
@@ -155,42 +148,25 @@ export async function handleMove(
     }
 
     case 'challenge_ack': {
-      const ackResult = ackChallenge(state, player)
-      if (ackResult.error) return { error: ackResult.error }
-      if (ackResult.bothAcked) {
-        clearChallengeTimer(gameId)
-        if (ackResult.state.status === 'finished') {
-          await saveGame(ackResult.state)
-          broadcast(ackResult.state)
-        } else {
-          const next = finishChallenge(ackResult.state)
-          await saveGame(next)
-          broadcast(next)
-          if (next.roundPhase === 'round_end') scheduleRoundEndAutoAdvance(gameId)
-        }
-      } else {
-        await saveGame(ackResult.state)
-        broadcast(ackResult.state)
-      }
+      if (state.roundPhase !== 'challenge_result') return { ok: true }
+      clearChallengeTimer(gameId)
+      const next = finishChallenge(state)
+      await saveGame(next)
+      broadcast(next)
+      if (next.roundPhase === 'round_end') scheduleRoundEndAutoAdvance(gameId)
       return { ok: true }
     }
 
     case 'round_end_ack': {
-      const ackResult = ackRoundEnd(state, player)
-      if (ackResult.error) return { error: ackResult.error }
-      if (ackResult.bothAcked) {
-        clearRoundEndTimer(gameId)
-        if (!state.challengeResult) return { error: 'No challenge result' }
-        const loser = state.challengeResult.challengerWins
-          ? state.challengeResult.challenged
-          : state.challengeResult.challenger
-        const next = newRound(ackResult.state, opponent(loser))
-        await saveGame(next)
-        broadcast(next)
-      } else {
-        await saveGame(ackResult.state)
-        broadcast(ackResult.state)
-      }
+      if (state.roundPhase !== 'round_end') return { ok: true }
+      clearRoundEndTimer(gameId)
+      if (!state.challengeResult) return { error: 'No challenge result' }
+      const loser = state.challengeResult.challengerWins
+        ? state.challengeResult.challenged
+        : state.challengeResult.challenger
+      const next = newRound(state, opponent(loser))
+      await saveGame(next)
+      broadcast(next)
       return { ok: true }
     }
 

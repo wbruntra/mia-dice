@@ -4,6 +4,15 @@ import { Die, getRankLabel, diceRank, RANKS } from '../../utils/game'
 import { toast } from 'sonner'
 import { useState, useCallback, useEffect, useRef } from 'react'
 
+function diceFromDisplay(display) {
+  if (!display) return null
+  if (display === 'Mia') return [2, 1]
+  if (display.length < 2) return null
+  const a = parseInt(display[0])
+  const b = parseInt(display[1])
+  return isNaN(a) || isNaN(b) ? null : [a, b]
+}
+
 function randomDie() {
   return Math.ceil(Math.random() * 6)
 }
@@ -162,42 +171,47 @@ export default function GameView() {
         )}
       </div>
 
-      {/* Dice Area */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-4">
-        {rolling && animDice ? (
+      {/* Dice Area — stable center block, no layout shift */}
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          {/* Dice — always 72px, always two */}
           <div className="flex gap-4">
-            <Die value={animDice[0]} size={72} />
-            <Die value={animDice[1]} size={72} />
+            {rolling && animDice ? (
+              <>
+                <Die value={animDice[0]} size={72} />
+                <Die value={animDice[1]} size={72} />
+              </>
+            ) : myDice ? (
+              <>
+                <Die value={myDice[0]} size={72} />
+                <Die value={myDice[1]} size={72} />
+              </>
+            ) : (
+              <>
+                <Die value={1} size={72} hidden />
+                <Die value={1} size={72} hidden />
+              </>
+            )}
           </div>
-        ) : myDice ? (
-          <div className="flex gap-4">
-            <Die value={myDice[0]} size={72} />
-            <Die value={myDice[1]} size={72} />
-          </div>
-        ) : (
-          <div className="flex gap-4">
-            <Die value={1} size={72} hidden />
-            <Die value={1} size={72} hidden />
-          </div>
-        )}
 
-        {/* Value display */}
-        {myDice && !rolling && (
-          <p className="text-2xl font-bold text-white">
-            {getRankLabel(diceRank(myDice))}
+          {/* Value label — fixed height, always occupies space */}
+          <p className="h-8 text-2xl font-bold text-white text-center leading-8">
+            {myDice && !rolling ? getRankLabel(diceRank(myDice)) : ''}
           </p>
-        )}
 
-        {/* Current Claim */}
-        {currentClaimDisplay && (
-          <div className="text-center">
-            <p className="text-xs text-neutral-500 uppercase tracking-wide">Current Claim</p>
-            <p className="text-3xl font-bold text-amber-400">{currentClaimDisplay}</p>
-            <p className="text-xs text-neutral-500 mt-1">
-              by {state.currentClaim?.player === state.player ? 'You' : state.opponentName}
-            </p>
+          {/* Current Claim — fixed height block */}
+          <div className="h-[72px] flex flex-col items-center justify-center text-center">
+            {currentClaimDisplay && (
+              <>
+                <p className="text-xs text-neutral-500 uppercase tracking-wide">Current Claim</p>
+                <p className="text-3xl font-bold text-amber-400">{currentClaimDisplay}</p>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  by {state.currentClaim?.player === state.player ? 'You' : state.opponentName}
+                </p>
+              </>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Player Area */}
@@ -217,107 +231,99 @@ export default function GameView() {
         </div>
       </div>
 
-      {/* Actions */}
-      {showActions && (
-        <div className="flex flex-wrap gap-2 justify-center">
-          {!hasCurrentClaim && (
-            <button
-              onClick={() => {
-                setPendingAction('claim')
-                setShowClaimPicker(true)
-              }}
-              className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
-            >
-              Make Claim
-            </button>
-          )}
+      {/* Actions + status — stable min-height so layout never shifts */}
+      <div className="min-h-[52px] flex flex-wrap gap-2 justify-center items-center">
+        {showActions && !hasCurrentClaim && (
+          <button
+            onClick={() => {
+              setPendingAction('claim')
+              setShowClaimPicker(true)
+            }}
+            className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
+          >
+            Make Claim
+          </button>
+        )}
 
-          {hasCurrentClaim && justRolled && (
+        {showActions && hasCurrentClaim && justRolled && (
+          <button
+            onClick={() => {
+              setPendingAction('raise')
+              setShowClaimPicker(true)
+            }}
+            className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
+          >
+            Raise
+          </button>
+        )}
+
+        {showActions && hasCurrentClaim && !justRolled && !isOriginalCaller && (
+          <>
             <button
               onClick={() => {
                 setPendingAction('raise')
                 setShowClaimPicker(true)
               }}
-              className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
+              className="px-4 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
             >
               Raise
             </button>
-          )}
+            <button
+              onClick={startRollAnimation}
+              className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors"
+            >
+              Roll
+            </button>
+            <button
+              onClick={handlePass}
+              className="px-4 py-3 bg-neutral-700 hover:bg-neutral-600 text-white font-semibold rounded-xl transition-colors"
+            >
+              Pass
+            </button>
+            <button
+              onClick={handleChallenge}
+              className="px-4 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl transition-colors"
+            >
+              Challenge
+            </button>
+          </>
+        )}
 
-          {hasCurrentClaim && !justRolled && !isOriginalCaller && (
-            <>
-              <button
-                onClick={() => {
-                  setPendingAction('raise')
-                  setShowClaimPicker(true)
-                }}
-                className="px-4 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
-              >
-                Raise
-              </button>
-              <button
-                onClick={startRollAnimation}
-                className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors"
-              >
-                Roll
-              </button>
-              <button
-                onClick={handlePass}
-                className="px-4 py-3 bg-neutral-700 hover:bg-neutral-600 text-white font-semibold rounded-xl transition-colors"
-              >
-                Pass
-              </button>
-              <button
-                onClick={handleChallenge}
-                className="px-4 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl transition-colors"
-              >
-                Challenge
-              </button>
-            </>
-          )}
+        {showActions && hasCurrentClaim && !justRolled && isOriginalCaller && (
+          <>
+            <button
+              onClick={() => {
+                setPendingAction('raise')
+                setShowClaimPicker(true)
+              }}
+              className="px-4 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
+            >
+              Raise
+            </button>
+            <button
+              onClick={startRollAnimation}
+              className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors"
+            >
+              Roll & Raise
+            </button>
+            <button
+              onClick={handleChallenge}
+              className="px-4 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl transition-colors"
+            >
+              Challenge
+            </button>
+          </>
+        )}
 
-          {hasCurrentClaim && !justRolled && isOriginalCaller && (
-            <>
-              <button
-                onClick={() => {
-                  setPendingAction('raise')
-                  setShowClaimPicker(true)
-                }}
-                className="px-4 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
-              >
-                Raise
-              </button>
-              <button
-                onClick={startRollAnimation}
-                className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors"
-              >
-                Roll & Raise
-              </button>
-              <button
-                onClick={handleChallenge}
-                className="px-4 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl transition-colors"
-              >
-                Challenge
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Waiting states */}
-      {state.roundPhase === 'claim' && !isMyTurn && hasCurrentClaim && (
-        <p className="text-center text-sm text-neutral-500">
-          Waiting for {state.opponentName}...
-        </p>
-      )}
+        {!showActions && state.roundPhase === 'claim' && !isMyTurn && hasCurrentClaim && (
+          <p className="text-sm text-neutral-500">Waiting for {state.opponentName}...</p>
+        )}
+      </div>
 
       {needChallengeAck && (
         <ChallengeResultOverlay
           result={state.challengeResult}
-          myName={state.myName}
-          opponentName={state.opponentName}
           onAck={() => handleAck('challenge')}
-          acked={challengeAcked}
         />
       )}
 
@@ -325,11 +331,10 @@ export default function GameView() {
         <RoundEndOverlay
           result={state.challengeResult}
           onAck={() => handleAck('round_end')}
-          acked={roundEndAcked}
         />
       )}
 
-      {state.status === 'finished' && !needRoundEndAck && showChallengeResult && (
+      {state.roundPhase === 'game_over' && (
         <GameOverOverlay
           winner={state.winner}
           myName={state.myName}
@@ -352,18 +357,17 @@ export default function GameView() {
         />
       )}
 
-      <div className="h-4" />
     </div>
   )
 }
 
-function ChallengeResultOverlay({ result, myName, opponentName, onAck, acked }) {
+function ChallengeResultOverlay({ result, onAck }) {
   const [phase, setPhase] = useState('dramatic')
-  const revealed = phase === 'revealing' || phase === 'revealed'
+  const cardbackUp = phase === 'revealing' || phase === 'revealed'
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('revealing'), 1000)
-    const t2 = setTimeout(() => setPhase('revealed'), 2200)
+    const t1 = setTimeout(() => setPhase('revealing'), 2000)
+    const t2 = setTimeout(() => setPhase('revealed'), 6000)
     return () => {
       clearTimeout(t1)
       clearTimeout(t2)
@@ -371,87 +375,94 @@ function ChallengeResultOverlay({ result, myName, opponentName, onAck, acked }) 
   }, [])
 
   if (!result) return null
-
   const iWon = result.iWon
+  const claimedDice = diceFromDisplay(result.claimedValue)
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 max-w-sm w-full text-center flex flex-col items-center">
-        {/* Phase header */}
-        {phase === 'dramatic' && (
-          <p className="text-2xl font-bold text-white mb-6 animate-pulse">Challenge!</p>
-        )}
-        {phase === 'revealing' && (
-          <p className="text-lg font-bold text-amber-400 mb-6 animate-pulse">Revealing...</p>
-        )}
+      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 max-w-sm w-full text-center">
 
-        {/* Dice with cardback overlay */}
-        <div className="flex justify-center gap-6 mb-4">
-          {result.dice.map((value, i) => (
-            <div
-              key={i}
-              className="relative overflow-hidden rounded-lg"
-              style={{ width: 72, height: 72 }}
-            >
-              <Die value={value} size={72} />
-              <img
-                src="/cards/cardback.webp"
-                alt="Hidden die"
-                className="absolute top-0 left-0 rounded-lg"
-                style={{
-                  width: 72,
-                  height: 72,
-                  transition: `transform 0.7s ${i * 0.2}s cubic-bezier(0.4, 0, 0.2, 1)`,
-                  transform: revealed ? 'translateY(-100%)' : 'translateY(0)',
-                }}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Result — appears after reveal */}
-        <div
-          className="transition-opacity duration-500 flex flex-col items-center"
-          style={{ opacity: phase === 'revealed' ? 1 : 0 }}
-        >
+        {/* Header — fixed height, text changes per phase */}
+        <div className="h-10 flex items-center justify-center mb-4">
+          {phase === 'dramatic' && (
+            <p className="text-2xl font-bold text-white animate-pulse">Challenge!</p>
+          )}
+          {phase === 'revealing' && (
+            <p className="text-xl font-bold text-amber-400 animate-pulse">Revealing...</p>
+          )}
           {phase === 'revealed' && (
-            <>
-              <p className="text-4xl mb-2">{iWon ? '🎉' : '💀'}</p>
-              <p className="text-xl font-bold text-white mb-4">
-                {iWon ? 'You won the challenge!' : 'You lost the challenge!'}
-              </p>
-              <div className="flex justify-center gap-4 mb-4">
-                <div className="bg-neutral-800 rounded-xl px-4 py-3">
-                  <p className="text-xs text-neutral-400">Claimed</p>
-                  <p className="text-2xl font-bold text-amber-400">{result.claimedValue}</p>
-                </div>
-                <div className="bg-neutral-800 rounded-xl px-4 py-3">
-                  <p className="text-xs text-neutral-400">Actual</p>
-                  <p className="text-2xl font-bold text-white">{result.actualValue}</p>
-                </div>
-              </div>
-              {result.livesLost > 1 && (
-                <p className="text-red-400 text-sm mb-4">Mia! Loser loses {result.livesLost} lives!</p>
-              )}
-              <button
-                onClick={onAck}
-                disabled={acked}
-                className="mt-2 px-6 py-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors disabled:opacity-50"
-              >
-                {acked ? 'Waiting...' : 'Continue'}
-              </button>
-            </>
+            <p className="text-xl font-bold text-white">
+              {iWon ? '🎉 You won!' : '💀 You lost!'}
+            </p>
           )}
         </div>
 
-        {/* Spacer to prevent layout collapse during animation phases */}
-        {phase !== 'revealed' && <div className="h-32" />}
+        {/* Claimed dice — visible from the start (the claim is not a secret) */}
+        <div className="bg-neutral-800 rounded-xl px-4 py-3 mb-2">
+          <p className="text-xs text-neutral-400 uppercase tracking-wide mb-2">Claimed</p>
+          <div className="flex justify-center gap-3">
+            {claimedDice
+              ? claimedDice.map((v, i) => <Die key={i} value={v} size={56} />)
+              : <span className="text-neutral-500 text-sm">—</span>
+            }
+          </div>
+          <p className="text-sm font-semibold text-amber-400 mt-2">{result.claimedValue}</p>
+        </div>
+
+        <p className="text-neutral-500 text-xs mb-2">▼ Actual</p>
+
+        {/* Actual dice — hidden behind cardbacks, revealed at 2s */}
+        <div className="bg-neutral-800 rounded-xl px-4 py-3 mb-4">
+          <p className="text-xs text-neutral-400 uppercase tracking-wide mb-2">Actual</p>
+          <div className="flex justify-center gap-3">
+            {result.dice.map((value, i) => (
+              <div key={i} className="relative overflow-hidden rounded-lg" style={{ width: 56, height: 56 }}>
+                <Die value={value} size={56} />
+                <img
+                  src="/cards/cardback.webp"
+                  alt=""
+                  className="absolute inset-0 rounded-lg"
+                  style={{
+                    width: 56,
+                    height: 56,
+                    transition: `transform 0.6s ${i * 0.15}s cubic-bezier(0.4, 0, 0.2, 1)`,
+                    transform: cardbackUp ? 'translateY(-100%)' : 'translateY(0)',
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+          {/* Label fades in only after outcome is shown */}
+          <p
+            className="text-sm font-semibold text-white mt-2 transition-opacity duration-500"
+            style={{ opacity: phase === 'revealed' ? 1 : 0 }}
+          >
+            {result.actualValue}
+          </p>
+        </div>
+
+        {/* Mia message — reserved height to prevent shift */}
+        <div className="h-5 mb-3">
+          {phase === 'revealed' && result.livesLost > 1 && (
+            <p className="text-red-400 text-sm">Mia! Loser loses {result.livesLost} lives!</p>
+          )}
+        </div>
+
+        {/* Continue — always present, invisible until revealed */}
+        <button
+          onClick={phase === 'revealed' ? onAck : undefined}
+          className={`px-6 py-2 bg-amber-500 text-black font-semibold rounded-xl transition-opacity duration-300 ${
+            phase === 'revealed' ? 'opacity-100 hover:bg-amber-400' : 'opacity-0 pointer-events-none'
+          }`}
+        >
+          Continue
+        </button>
       </div>
     </div>
   )
 }
 
-function RoundEndOverlay({ result, onAck, acked }) {
+function RoundEndOverlay({ result, onAck }) {
   if (!result) return null
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
@@ -464,10 +475,9 @@ function RoundEndOverlay({ result, onAck, acked }) {
         </p>
         <button
           onClick={onAck}
-          disabled={acked}
-          className="mt-4 px-6 py-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors disabled:opacity-50"
+          className="mt-4 px-6 py-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
         >
-          {acked ? 'Waiting...' : 'Next Round'}
+          Next Round
         </button>
       </div>
     </div>
