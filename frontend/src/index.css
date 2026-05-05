@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: ui-monospace, Consolas, monospace;
+}
+
+body,
+#root {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  background: #0a0a0f;
+  color: #fafafa;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 12px);
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

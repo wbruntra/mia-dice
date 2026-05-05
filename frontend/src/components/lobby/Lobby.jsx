@@ -1,0 +1,124 @@
+import { useState } from 'react'
+import { toast } from 'sonner'
+
+const API = '/api'
+
+export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
+  const [name, setName] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [showJoin, setShowJoin] = useState(!!joinId)
+  const [joinCode, setJoinCode] = useState(joinId || '')
+
+  async function createGame() {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API}/games`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() || undefined }),
+      })
+      const data = await res.json()
+      if (data.error) {
+        toast.error(data.error)
+      } else {
+        onNavigateToGame(data.gameId, data.playerId)
+      }
+    } catch (e) {
+      toast.error('Failed to create game')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function joinGame() {
+    if (!joinCode.trim()) return
+    setLoading(true)
+    try {
+      const res = await fetch(`${API}/games/${joinCode.trim()}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() || undefined }),
+      })
+      const data = await res.json()
+      if (data.error) {
+        toast.error(data.error)
+      } else {
+        onNavigateToGame(data.gameId, data.playerId)
+      }
+    } catch (e) {
+      toast.error('Failed to join game')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-dvh flex flex-col items-center justify-center px-4 bg-gradient-to-b from-neutral-950 via-neutral-900 to-neutral-950">
+      <div className="w-full max-w-sm text-center">
+        <h1 className="text-4xl font-extrabold text-white mb-2">Mia</h1>
+        <p className="text-neutral-500 text-sm mb-8">A classic bluffing dice game</p>
+
+        {!showJoin ? (
+          <div className="flex flex-col gap-3">
+            <input
+              type="text"
+              placeholder="Your name (optional)"
+              value={name}
+              onChange={(e) => setName(e.target.value.slice(0, 20))}
+              maxLength={20}
+              className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 transition-colors"
+            />
+            <button
+              onClick={createGame}
+              disabled={loading}
+              className="w-full px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors disabled:opacity-50"
+            >
+              Create Game
+            </button>
+            <button
+              onClick={() => setShowJoin(true)}
+              className="w-full px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-semibold rounded-xl transition-colors"
+            >
+              Join Game
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <input
+              type="text"
+              placeholder="Your name (optional)"
+              value={name}
+              onChange={(e) => setName(e.target.value.slice(0, 20))}
+              maxLength={20}
+              className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 transition-colors"
+            />
+            <input
+              type="text"
+              placeholder="Game code"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value.trim().slice(0, 20))}
+              className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 transition-colors font-mono"
+              autoFocus
+            />
+            <button
+              onClick={joinGame}
+              disabled={loading || !joinCode.trim()}
+              className="w-full px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors disabled:opacity-50"
+            >
+              Join Game
+            </button>
+            <button
+              onClick={() => {
+                setShowJoin(false)
+                onNavigateToLobby()
+              }}
+              className="w-full px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 rounded-xl transition-colors"
+            >
+              Back
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

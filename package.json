@@ -1,0 +1,29 @@
+{
+  "name": "mexico",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run backend & sleep 1 && bun run frontend",
+    "frontend": "cd frontend && bun run dev",
+    "backend": "bun --watch index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:update": "bun scripts/db-migrate.ts",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,html,md}\" \"!**/node_modules/**\" \"!**/dist/**\" \"!**/*.lock\" \"!**/mexico.db\""
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "drizzle-kit": "^0.31.10",
+    "prettier": "^3.8.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "hono": "4.12.16"
+  }
+}
