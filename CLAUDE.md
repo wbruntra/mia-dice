@@ -62,5 +62,10 @@ Classic bluffing dice game with two dice and a cup.
    - **Challenge**: reveal dice. If actual < claimed, claimer loses a life. Otherwise challenger loses.
    - **Pass**: pass without looking, taking responsibility for current claim
 3. When dice return to the original caller (full circle), they MUST challenge or raise
-4. If Mia (21) is rolled or announced, loser loses 2 lives
-5. Each player has 3 lives. Last one standing wins.
+
+**Mia (21) special rules:**
+When a player claims Mia, the next player CANNOT raise, roll, or pass. They must choose:
+- **Give Up**: accept the claim, lose 1 life, round ends
+- **Look**: reveal the dice. If the dice really are Mia (21), the looker loses 2 lives. If not, the Mia claimer was bluffing and loses 1 life.
+
+4. Each player has 5 lives. Last one standing wins.

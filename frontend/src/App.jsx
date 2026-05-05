@@ -67,7 +67,7 @@ export default function App() {
     >
       <GameUIProvider>
         <Toaster position="top-center" richColors />
-        <div className="min-h-dvh flex flex-col bg-gradient-to-b from-neutral-950 via-neutral-900 to-neutral-950">
+        <div className="min-h-dvh flex flex-col bg-gradient-to-b from-pirate-navy via-pirate-navy-light to-pirate-navy">
           <GameView />
         </div>
       </GameUIProvider>

@@ -29,14 +29,12 @@ export default function GameView() {
   const rollTimerRef = useRef(null)
   const rollIntervalRef = useRef(null)
 
-  // Clear justRolled when it's no longer our turn (after raising)
   useEffect(() => {
     if (state && state.turnPlayer !== state.player) {
       setJustRolled(false)
     }
   }, [state?.turnPlayer, state?.player])
 
-  // Cleanup roll animation on unmount
   useEffect(() => {
     return () => {
       if (rollTimerRef.current) clearTimeout(rollTimerRef.current)
@@ -66,7 +64,7 @@ export default function GameView() {
   if (!state) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <p className="text-neutral-400">
+        <p className="text-pirate-parchment/50">
           {!connected ? 'Connecting...' : 'Loading...'}
         </p>
       </div>
@@ -87,7 +85,8 @@ export default function GameView() {
   const isMyTurn = state.turnPlayer === state.player
   const hasCurrentClaim = state.currentClaim !== null
   const isOriginalCaller = state.originalCaller === state.player
-  const canPass = state.canPass && state.roundPhase === 'claim' && isMyTurn && hasCurrentClaim && !isOriginalCaller
+  const isMiaClaim = state.currentClaim?.value === 20
+  const canPass = state.canPass && state.roundPhase === 'claim' && isMyTurn && hasCurrentClaim && !isOriginalCaller && !isMiaClaim
   const showActions =
     isMyTurn && state.roundPhase === 'claim' && state.status === 'playing'
 
@@ -116,6 +115,10 @@ export default function GameView() {
     doSend({ type: 'challenge' })
   }
 
+  function handleGiveUp() {
+    doSend({ type: 'give_up' })
+  }
+
   function handleAck(type) {
     if (type === 'challenge') {
       setChallengeAcked(true)
@@ -137,44 +140,46 @@ export default function GameView() {
   const currentClaimDisplay = state.currentClaim?.display
 
   return (
-    <div className="flex-1 flex flex-col max-w-lg mx-auto w-full px-4 py-6 gap-4">
+    <div className="flex-1 flex flex-col max-w-lg mx-auto w-full px-4 py-6 gap-4 relative">
+      {/* Background overlay */}
+      <div className="bg-pirate" />
+
       {/* Header */}
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between relative z-10">
         <button
           onClick={onLeave}
-          className="text-neutral-500 text-sm hover:text-neutral-300 transition-colors"
+          className="text-pirate-parchment/40 text-sm hover:text-pirate-parchment/70 transition-colors"
         >
           Leave
         </button>
-        <span className="text-neutral-500 text-sm">Round {state.roundNumber}</span>
-        <span className="text-neutral-700 text-sm">
+        <span className="font-pirate text-pirate-gold text-base">⚓ Round {state.roundNumber}</span>
+        <span className="text-pirate-parchment/30 text-sm">
           {state.status === 'waiting' && 'Waiting for opponent...'}
           {!connected && ' (reconnecting)'}
         </span>
       </header>
 
       {/* Opponent Area */}
-      <div className="flex items-center justify-between bg-neutral-900/50 rounded-xl p-4 border border-neutral-800">
+      <div className="flex items-center justify-between bg-pirate-wood/60 rounded-xl p-4 border border-pirate-gold/20 relative z-10">
         <div>
-          <p className="text-sm text-neutral-400">{state.opponentName}</p>
+          <p className="text-sm text-pirate-parchment/70">{state.opponentName}</p>
           <div className="flex gap-0.5 mt-1">
             {Array.from({ length: state.opponentLives }, (_, i) => (
               <span key={i} className="text-red-500 text-lg">&#9829;</span>
             ))}
-            {Array.from({ length: Math.max(0, 3 - state.opponentLives) }, (_, i) => (
-              <span key={`e-${i}`} className="text-neutral-700 text-lg">&#9829;</span>
+            {Array.from({ length: Math.max(0, 5 - state.opponentLives) }, (_, i) => (
+              <span key={`e-${i}`} className="text-pirate-wood-light/50 text-lg">&#9829;</span>
             ))}
           </div>
         </div>
         {state.turnPlayer !== state.player && state.roundPhase === 'claim' && (
-          <span className="text-amber-500 text-xs animate-pulse">Thinking...</span>
+          <span className="text-pirate-gold text-xs animate-pulse">Thinking...</span>
         )}
       </div>
 
-      {/* Dice Area — stable center block, no layout shift */}
-      <div className="flex-1 flex flex-col items-center justify-center">
+      {/* Dice Area */}
+      <div className="flex-1 flex flex-col items-center justify-center relative z-10">
         <div className="flex flex-col items-center gap-3">
-          {/* Dice — always 72px, always two */}
           <div className="flex gap-4">
             {rolling && animDice ? (
               <>
@@ -194,18 +199,18 @@ export default function GameView() {
             )}
           </div>
 
-          {/* Value label — fixed height, always occupies space */}
-          <p className="h-8 text-2xl font-bold text-white text-center leading-8">
+          <p className="h-8 font-pirate text-2xl text-pirate-gold text-center leading-8">
             {myDice && !rolling ? getRankLabel(diceRank(myDice)) : ''}
           </p>
 
-          {/* Current Claim — fixed height block */}
           <div className="h-[72px] flex flex-col items-center justify-center text-center">
             {currentClaimDisplay && (
               <>
-                <p className="text-xs text-neutral-500 uppercase tracking-wide">Current Claim</p>
-                <p className="text-3xl font-bold text-amber-400">{currentClaimDisplay}</p>
-                <p className="text-xs text-neutral-500 mt-0.5">
+                <p className="text-xs text-pirate-parchment/40 uppercase tracking-widest">
+                  ☠️ Current Claim ☠️
+                </p>
+                <p className="font-pirate text-4xl text-pirate-gold">{currentClaimDisplay}</p>
+                <p className="text-xs text-pirate-parchment/40 mt-0.5">
                   by {state.currentClaim?.player === state.player ? 'You' : state.opponentName}
                 </p>
               </>
@@ -215,108 +220,120 @@ export default function GameView() {
       </div>
 
       {/* Player Area */}
-      <div className="flex items-center justify-between bg-neutral-900/50 rounded-xl p-4 border border-neutral-800">
+      <div className="flex items-center justify-between bg-pirate-wood/60 rounded-xl p-4 border border-pirate-gold/20 relative z-10">
         <div>
-          <p className="text-sm font-medium text-white">
-            {state.myName} {isMyTurn && state.roundPhase === 'claim' && '⬅'}
+          <p className="text-sm font-medium text-pirate-parchment">
+            {state.myName} {isMyTurn && state.roundPhase === 'claim' && '🏴‍☠️'}
           </p>
           <div className="flex gap-0.5 mt-1">
             {Array.from({ length: state.myLives }, (_, i) => (
               <span key={i} className="text-red-500 text-lg">&#9829;</span>
             ))}
-            {Array.from({ length: Math.max(0, 3 - state.myLives) }, (_, i) => (
-              <span key={`e-${i}`} className="text-neutral-700 text-lg">&#9829;</span>
+            {Array.from({ length: Math.max(0, 5 - state.myLives) }, (_, i) => (
+              <span key={`e-${i}`} className="text-pirate-wood-light/50 text-lg">&#9829;</span>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Actions + status — stable min-height so layout never shifts */}
-      <div className="min-h-[52px] flex flex-wrap gap-2 justify-center items-center">
-        {showActions && !hasCurrentClaim && (
+      {/* Actions */}
+      <div className="min-h-[52px] flex flex-wrap gap-2 justify-center items-center relative z-10">
+        {/* Mia claim — special options */}
+        {showActions && isMiaClaim && (
+          <>
+            <button onClick={handleGiveUp} className="btn-parchment">
+              🏳️ Give Up
+            </button>
+            <button onClick={handleChallenge} className="btn-crimson">
+              👀 Look
+            </button>
+          </>
+        )}
+
+        {showActions && !isMiaClaim && !hasCurrentClaim && (
           <button
             onClick={() => {
               setPendingAction('claim')
               setShowClaimPicker(true)
             }}
-            className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
+            className="btn-gold"
           >
-            Make Claim
+            🪙 Make Claim
           </button>
         )}
 
-        {showActions && hasCurrentClaim && justRolled && (
+        {showActions && !isMiaClaim && hasCurrentClaim && justRolled && (
           <button
             onClick={() => {
               setPendingAction('raise')
               setShowClaimPicker(true)
             }}
-            className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
+            className="btn-gold"
           >
-            Raise
+            🪙 Raise
           </button>
         )}
 
-        {showActions && hasCurrentClaim && !justRolled && !isOriginalCaller && (
+        {showActions && !isMiaClaim && hasCurrentClaim && !justRolled && !isOriginalCaller && (
           <>
             <button
               onClick={() => {
                 setPendingAction('raise')
                 setShowClaimPicker(true)
               }}
-              className="px-4 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
+              className="btn-gold"
             >
-              Raise
+              🪙 Raise
             </button>
             <button
               onClick={startRollAnimation}
-              className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors"
+              className="btn-ocean"
             >
-              Roll
+              🎲 Roll
             </button>
             <button
               onClick={handlePass}
-              className="px-4 py-3 bg-neutral-700 hover:bg-neutral-600 text-white font-semibold rounded-xl transition-colors"
+              className="btn-parchment"
             >
-              Pass
+              📜 Pass
             </button>
             <button
               onClick={handleChallenge}
-              className="px-4 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl transition-colors"
+              className="btn-crimson"
             >
-              Challenge
+              ☠️ Challenge
             </button>
           </>
         )}
 
-        {showActions && hasCurrentClaim && !justRolled && isOriginalCaller && (
+        {showActions && !isMiaClaim && hasCurrentClaim && !justRolled && isOriginalCaller && (
           <>
             <button
               onClick={() => {
                 setPendingAction('raise')
                 setShowClaimPicker(true)
               }}
-              className="px-4 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
+              className="btn-gold"
             >
-              Raise
+              🪙 Raise
             </button>
             <button
               onClick={startRollAnimation}
-              className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors"
+              className="btn-ocean"
             >
-              Roll & Raise
+              ⚓ Roll &amp; Raise
             </button>
             <button
               onClick={handleChallenge}
-              className="px-4 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl transition-colors"
+              className="btn-crimson"
             >
-              Challenge
+              ☠️ Challenge
             </button>
           </>
         )}
 
         {!showActions && state.roundPhase === 'claim' && !isMyTurn && hasCurrentClaim && (
-          <p className="text-sm text-neutral-500">Waiting for {state.opponentName}...</p>
+          <p className="text-sm text-pirate-parchment/40 italic">Waiting for {state.opponentName}...</p>
         )}
       </div>
 
@@ -344,7 +361,6 @@ export default function GameView() {
         />
       )}
 
-      {/* Claim Picker Modal */}
       {showClaimPicker && (
         <ClaimPickerModal
           currentClaim={state.currentClaim}
@@ -356,7 +372,6 @@ export default function GameView() {
           }}
         />
       )}
-
     </div>
   )
 }
@@ -375,49 +390,66 @@ function ChallengeResultOverlay({ result, onAck }) {
   }, [])
 
   if (!result) return null
+
+  // Simplified overlay for giving up against Mia
+  if (result.gaveUp) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+        <div className="bg-pirate-wood-light border border-pirate-gold/40 rounded-2xl p-6 max-w-sm w-full text-center">
+          <p className="font-pirate text-3xl text-pirate-gold mb-4">🏳️ Gave Up</p>
+          <p className="text-pirate-parchment/60 text-sm mb-3">
+            {result.iChallenged
+              ? 'You folded against Mia.'
+              : 'Opponent gave up against your Mia!'}
+          </p>
+          <p className="text-red-400 text-sm mb-4">
+            {result.iChallenged ? 'You' : 'Opponent'} lost {result.livesLost} life
+          </p>
+          <button onClick={onAck} className="btn-gold">Continue</button>
+        </div>
+      </div>
+    )
+  }
+
   const iWon = result.iWon
   const claimedDice = diceFromDisplay(result.claimedValue)
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 max-w-sm w-full text-center">
+      <div className="bg-pirate-wood-light border border-pirate-gold/40 rounded-2xl p-6 max-w-sm w-full text-center">
 
-        {/* Header — fixed height, text changes per phase */}
         <div className="h-10 flex items-center justify-center mb-4">
           {phase === 'dramatic' && (
-            <p className="text-2xl font-bold text-white animate-pulse">Challenge!</p>
+            <p className="font-pirate text-3xl text-pirate-gold animate-pulse">Challenge!</p>
           )}
           {phase === 'revealing' && (
-            <p className="text-xl font-bold text-amber-400 animate-pulse">Revealing...</p>
+            <p className="font-pirate text-xl text-pirate-gold animate-pulse">Revealing...</p>
           )}
           {phase === 'revealed' && (
-            <p className="text-xl font-bold text-white">
+            <p className="font-pirate text-2xl text-pirate-parchment">
               {iWon ? '🎉 You won!' : '💀 You lost!'}
             </p>
           )}
         </div>
 
-        {/* Claimed dice — visible from the start (the claim is not a secret) */}
-        <div className="bg-neutral-800 rounded-xl px-4 py-3 mb-2">
-          <p className="text-xs text-neutral-400 uppercase tracking-wide mb-2">Claimed</p>
+        <div className="bg-pirate-wood/40 rounded-xl px-4 py-3 mb-2">
+          <p className="text-xs text-pirate-parchment/50 uppercase tracking-wide mb-2">Claimed</p>
           <div className="flex justify-center gap-3">
             {claimedDice
               ? claimedDice.map((v, i) => <Die key={i} value={v} size={56} />)
-              : <span className="text-neutral-500 text-sm">—</span>
+              : <span className="text-pirate-parchment/40 text-sm">—</span>
             }
           </div>
-          <p className="text-sm font-semibold text-amber-400 mt-2">{result.claimedValue}</p>
+          <p className="font-pirate text-lg text-pirate-gold mt-2">{result.claimedValue}</p>
         </div>
 
-        <p className="text-neutral-500 text-xs mb-2">▼ Actual</p>
+        <p className="text-pirate-parchment/30 text-xs mb-2">▼ Actual</p>
 
-        {/* Actual dice — hidden behind cardbacks, revealed at 2s */}
-        <div className="bg-neutral-800 rounded-xl px-4 py-3 mb-4">
-          <p className="text-xs text-neutral-400 uppercase tracking-wide mb-2">Actual</p>
+        <div className="bg-pirate-wood/40 rounded-xl px-4 py-3 mb-4">
+          <p className="text-xs text-pirate-parchment/50 uppercase tracking-wide mb-2">Actual</p>
           <div className="flex justify-center gap-3">
             {result.dice.map((value, i) => (
-              <div key={i} className="relative overflow-hidden rounded-lg bg-neutral-700" style={{ width: 56, height: 56 }}>
-                {/* Die face hidden until the cardback starts sliding — prevents flash on image load */}
+              <div key={i} className="relative overflow-hidden rounded-lg bg-pirate-wood" style={{ width: 56, height: 56 }}>
                 <div style={{ visibility: cardbackUp ? 'visible' : 'hidden' }}>
                   <Die value={value} size={56} />
                 </div>
@@ -435,27 +467,24 @@ function ChallengeResultOverlay({ result, onAck }) {
               </div>
             ))}
           </div>
-          {/* Label fades in only after outcome is shown */}
           <p
-            className="text-sm font-semibold text-white mt-2 transition-opacity duration-500"
+            className="font-pirate text-lg text-pirate-parchment mt-2 transition-opacity duration-500"
             style={{ opacity: phase === 'revealed' ? 1 : 0 }}
           >
             {result.actualValue}
           </p>
         </div>
 
-        {/* Mia message — reserved height to prevent shift */}
         <div className="h-5 mb-3">
           {phase === 'revealed' && result.livesLost > 1 && (
             <p className="text-red-400 text-sm">Mia! Loser loses {result.livesLost} lives!</p>
           )}
         </div>
 
-        {/* Continue — always present, invisible until revealed */}
         <button
           onClick={phase === 'revealed' ? onAck : undefined}
-          className={`px-6 py-2 bg-amber-500 text-black font-semibold rounded-xl transition-opacity duration-300 ${
-            phase === 'revealed' ? 'opacity-100 hover:bg-amber-400' : 'opacity-0 pointer-events-none'
+          className={`btn-gold transition-opacity duration-300 ${
+            phase === 'revealed' ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
         >
           Continue
@@ -469,16 +498,16 @@ function RoundEndOverlay({ result, onAck }) {
   if (!result) return null
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 max-w-sm w-full text-center">
-        <p className="text-3xl mb-4">Round Over</p>
-        <p className="text-neutral-400 text-sm">
+      <div className="bg-pirate-wood-light border border-pirate-gold/40 rounded-2xl p-6 max-w-sm w-full text-center">
+        <p className="font-pirate text-3xl text-pirate-gold mb-4">⚓ Round Over</p>
+        <p className="text-pirate-parchment/60 text-sm">
           {result.challengerWins
             ? 'Challenger caught the bluff!'
             : 'Challenger was wrong!'}
         </p>
         <button
           onClick={onAck}
-          className="mt-4 px-6 py-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
+          className="mt-4 btn-gold"
         >
           Next Round
         </button>
@@ -491,14 +520,17 @@ function GameOverOverlay({ winner, myName, opponentName, player, onLeave }) {
   const iWon = winner === player
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
-      <div className="bg-neutral-900 border border-amber-700 rounded-2xl p-8 max-w-sm w-full text-center">
-        <p className="text-5xl mb-4">{iWon ? '🏆' : '😞'}</p>
-        <p className="text-2xl font-bold text-white mb-2">
+      <div className="bg-pirate-wood-light border border-pirate-gold rounded-2xl p-8 max-w-sm w-full text-center">
+        <p className="text-5xl mb-4">{iWon ? '🏆' : '💀'}</p>
+        <p className="font-pirate text-3xl text-pirate-gold mb-2">
           {iWon ? 'You Win!' : `${opponentName} Wins!`}
+        </p>
+        <p className="text-pirate-parchment/50 text-sm mb-4">
+          {iWon ? 'The seas are yours, captain!' : 'Walk the plank...'}
         </p>
         <button
           onClick={onLeave}
-          className="mt-6 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors"
+          className="btn-gold"
         >
           Back to Lobby
         </button>
@@ -514,13 +546,13 @@ function ClaimPickerModal({ currentClaim, myDice, onSelect, onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col p-4">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-lg font-bold text-white">Choose Claim</p>
-        <button onClick={onClose} className="text-neutral-400 hover:text-white text-2xl">&times;</button>
+        <p className="font-pirate text-xl text-pirate-gold">Choose Claim</p>
+        <button onClick={onClose} className="text-pirate-parchment/40 hover:text-pirate-parchment text-2xl">&times;</button>
       </div>
       {currentClaim && (
-        <p className="text-sm text-neutral-400 mb-3">
+        <p className="text-sm text-pirate-parchment/50 mb-3">
           Must be higher than{' '}
-          <span className="text-amber-400 font-bold">{currentClaim.display}</span>
+          <span className="text-pirate-gold font-bold font-pirate">{currentClaim.display}</span>
         </p>
       )}
       <div className="flex-1 overflow-y-auto grid grid-cols-3 gap-2 content-start">
@@ -532,10 +564,10 @@ function ClaimPickerModal({ currentClaim, myDice, onSelect, onClose }) {
               onClick={() => onSelect(rank.value)}
               className={`relative py-3 px-2 rounded-xl text-center font-bold text-lg transition-colors ${
                 rank.label === 'Mia'
-                  ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                  ? 'bg-pirate-gold hover:bg-pirate-gold-light text-black font-pirate'
                   : rank.value >= 14
-                    ? 'bg-neutral-700 hover:bg-neutral-600 text-white'
-                    : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
+                    ? 'bg-pirate-wood-light hover:bg-pirate-wood text-pirate-parchment'
+                    : 'bg-pirate-navy-light hover:bg-pirate-wood text-pirate-parchment/70'
               }`}
             >
               {rank.label}
@@ -546,7 +578,7 @@ function ClaimPickerModal({ currentClaim, myDice, onSelect, onClose }) {
           )
         })}
         {minValue > 20 && (
-          <p className="col-span-3 text-center text-neutral-500 py-8">
+          <p className="col-span-3 text-center text-pirate-parchment/40 py-8">
             No valid claims remaining. Must challenge!
           </p>
         )}
@@ -565,36 +597,38 @@ function WaitingRoom({ gameId, joinUrl, onLeave }) {
       setTimeout(() => setCopied(false), 2000)
       toast.success('Link copied!')
     } catch {
-      // fallback for non-HTTPS
       toast.error('Failed to copy')
     }
   }, [joinUrl])
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
-      <p className="text-xl font-bold text-white">Game Created</p>
-      <p className="text-neutral-400 text-sm">Share this link with your opponent:</p>
+    <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4 relative">
+      <div className="bg-pirate" />
+      <p className="font-pirate text-2xl text-pirate-gold relative z-10">Game Created</p>
+      <p className="text-pirate-parchment/50 text-sm relative z-10">Share this link with your opponent:</p>
 
-      <div className="w-full max-w-sm bg-neutral-900 border border-neutral-700 rounded-xl p-3 flex items-center gap-2">
-        <p className="flex-1 text-sm font-mono text-amber-400 truncate">{joinUrl}</p>
+      <div className="w-full max-w-sm bg-pirate-wood/60 border border-pirate-gold/20 rounded-xl p-3 flex items-center gap-2 relative z-10">
+        <p className="flex-1 text-sm font-mono text-pirate-ocean truncate">{joinUrl}</p>
         <button
           onClick={handleCopy}
           className={`shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
             copied
-              ? 'bg-emerald-600 text-white'
-              : 'bg-neutral-700 hover:bg-neutral-600 text-neutral-300'
+              ? 'bg-pirate-ocean text-white'
+              : 'bg-pirate-wood hover:bg-pirate-wood-light text-pirate-parchment/70'
           }`}
         >
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
 
-      <p className="text-neutral-600 text-xs">or code: <span className="font-mono text-neutral-400">{gameId}</span></p>
+      <p className="text-pirate-parchment/30 text-xs relative z-10">
+        or code: <span className="font-mono text-pirate-parchment/50">{gameId}</span>
+      </p>
 
-      <p className="text-neutral-500 text-sm">Waiting for opponent to join...</p>
+      <p className="text-pirate-parchment/40 text-sm relative z-10">Waiting for opponent to join...</p>
       <button
         onClick={onLeave}
-        className="mt-4 px-6 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 rounded-xl transition-colors"
+        className="mt-4 btn-parchment relative z-10"
       >
         Leave
       </button>

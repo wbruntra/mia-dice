@@ -5,6 +5,7 @@ import {
   raise,
   rollAndRaise,
   resolveChallenge,
+  giveUp,
   finishChallenge,
   newRound,
 } from '../game/engine'
@@ -20,6 +21,7 @@ export type Move =
   | { type: 'raise'; value: number }
   | { type: 'roll_raise'; value: number }
   | { type: 'challenge' }
+  | { type: 'give_up' }
   | { type: 'challenge_ack' }
   | { type: 'round_end_ack' }
 
@@ -142,6 +144,16 @@ export async function handleMove(
         challengerWins: r.result.challengerWins,
         livesLost: r.result.livesLost,
       })
+      broadcast(r.state)
+      scheduleChallengeAutoAdvance(gameId)
+      return { ok: true }
+    }
+
+    case 'give_up': {
+      const r = giveUp(state, player)
+      if ('error' in r) return { error: r.error }
+      await saveGame(r.state)
+      await appendEvent(gameId, player, 'give_up')
       broadcast(r.state)
       scheduleChallengeAutoAdvance(gameId)
       return { ok: true }

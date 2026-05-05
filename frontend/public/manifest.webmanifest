@@ -1,11 +1,11 @@
 {
-  "name": "Cake Duel",
-  "short_name": "Cake Duel",
+  "name": "Mia",
+  "short_name": "Mia",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#16171d",
-  "theme_color": "#aa3bff",
+  "background_color": "#061220",
+  "theme_color": "#d4a017",
   "icons": [
     {
       "src": "/icon-192.png",

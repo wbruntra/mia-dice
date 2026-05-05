@@ -3,6 +3,16 @@
 @theme {
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: ui-monospace, Consolas, monospace;
+  --font-pirate: 'Pirata One', cursive;
+  --color-pirate-navy: #061220;
+  --color-pirate-navy-light: #0a1628;
+  --color-pirate-wood: #2c1810;
+  --color-pirate-wood-light: #3e2723;
+  --color-pirate-gold: #d4a017;
+  --color-pirate-gold-light: #e6b422;
+  --color-pirate-parchment: #f5f0e8;
+  --color-pirate-crimson: #8b0000;
+  --color-pirate-ocean: #0d7377;
 }
 
 body,
@@ -10,10 +20,21 @@ body,
   margin: 0;
   min-height: 100dvh;
   font-family: var(--font-sans);
-  background: #0a0a0f;
-  color: #fafafa;
+  background: #061220;
+  color: #f5f0e8;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.bg-pirate {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url('/pirate-bg.webp');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.12;
 }
 
 .safe-bottom {
@@ -26,4 +47,25 @@ body,
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/* Pirate button base styles */
+.btn-gold {
+  @apply px-4 py-3 bg-pirate-gold hover:bg-pirate-gold-light text-black font-semibold
+         rounded-xl transition-all active:scale-95 shadow-lg shadow-pirate-gold/20;
+}
+
+.btn-ocean {
+  @apply px-4 py-3 bg-pirate-ocean hover:bg-pirate-ocean/80 text-white font-semibold
+         rounded-xl transition-all active:scale-95 shadow-md;
+}
+
+.btn-crimson {
+  @apply px-4 py-3 bg-pirate-crimson hover:bg-pirate-crimson/80 text-white font-semibold
+         rounded-xl transition-all active:scale-95 shadow-md;
+}
+
+.btn-parchment {
+  @apply px-4 py-3 bg-pirate-wood/60 hover:bg-pirate-wood/80 text-pirate-parchment/80
+         font-semibold rounded-xl transition-all active:scale-95 border border-pirate-gold/20;
 }

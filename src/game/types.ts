@@ -41,6 +41,7 @@ export interface ChallengeResult {
   dice: [number, number]
   challengerWins: boolean
   livesLost: number
+  gaveUp?: boolean
 }
 
 export function opponent(player: Player): Player {

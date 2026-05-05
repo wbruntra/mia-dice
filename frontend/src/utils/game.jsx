@@ -57,19 +57,21 @@ export function Die({ value, size = 48, hidden = false }) {
       style={{
         width: sz,
         height: sz,
-        background: '#fafafa',
-        border: '2px solid #e0e0e0',
+        background: '#e8dcc8',
+        border: '2px solid #c4a97d',
+        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.15)',
       }}
     >
       {dots.map(([r, c], i) => (
         <div
           key={i}
-          className="absolute rounded-full bg-neutral-900"
+          className="absolute rounded-full"
           style={{
             width: dotSz,
             height: dotSz,
             top: sz * 0.2 + r * sz * 0.27 - dotSz / 2,
             left: sz * 0.2 + c * sz * 0.27 - dotSz / 2,
+            background: '#1a0d08',
           }}
         />
       ))}

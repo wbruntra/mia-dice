@@ -53,10 +53,11 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center px-4 bg-gradient-to-b from-neutral-950 via-neutral-900 to-neutral-950">
-      <div className="w-full max-w-sm text-center">
-        <h1 className="text-4xl font-extrabold text-white mb-2">Mia</h1>
-        <p className="text-neutral-500 text-sm mb-8">A classic bluffing dice game</p>
+    <div className="min-h-dvh flex flex-col items-center justify-center px-4 bg-gradient-to-b from-pirate-navy via-pirate-navy-light to-pirate-navy">
+      <div className="bg-pirate fixed inset-0 z-0 pointer-events-none" />
+      <div className="w-full max-w-sm text-center relative z-10">
+        <h1 className="font-pirate text-5xl text-pirate-gold mb-2">🏴‍☠️ Mia 🏴‍☠️</h1>
+        <p className="text-pirate-parchment/50 text-sm mb-8">A classic bluffing dice game</p>
 
         {!showJoin ? (
           <div className="flex flex-col gap-3">
@@ -66,18 +67,18 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, 20))}
               maxLength={20}
-              className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full px-4 py-3 bg-pirate-wood-light border border-pirate-gold/30 rounded-xl text-pirate-parchment placeholder-pirate-parchment/40 focus:outline-none focus:border-pirate-gold transition-colors"
             />
             <button
               onClick={createGame}
               disabled={loading}
-              className="w-full px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors disabled:opacity-50"
+              className="w-full btn-gold disabled:opacity-50"
             >
               Create Game
             </button>
             <button
               onClick={() => setShowJoin(true)}
-              className="w-full px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-semibold rounded-xl transition-colors"
+              className="w-full btn-parchment"
             >
               Join Game
             </button>
@@ -90,20 +91,20 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, 20))}
               maxLength={20}
-              className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full px-4 py-3 bg-pirate-wood-light border border-pirate-gold/30 rounded-xl text-pirate-parchment placeholder-pirate-parchment/40 focus:outline-none focus:border-pirate-gold transition-colors"
             />
             <input
               type="text"
               placeholder="Game code"
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.trim().slice(0, 20))}
-              className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 transition-colors font-mono"
+              className="w-full px-4 py-3 bg-pirate-wood-light border border-pirate-gold/30 rounded-xl text-pirate-parchment placeholder-pirate-parchment/40 focus:outline-none focus:border-pirate-gold transition-colors font-mono"
               autoFocus
             />
             <button
               onClick={joinGame}
               disabled={loading || !joinCode.trim()}
-              className="w-full px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-colors disabled:opacity-50"
+              className="w-full btn-gold disabled:opacity-50"
             >
               Join Game
             </button>
@@ -112,7 +113,7 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
                 setShowJoin(false)
                 onNavigateToLobby()
               }}
-              className="w-full px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 rounded-xl transition-colors"
+              className="w-full btn-parchment"
             >
               Back
             </button>

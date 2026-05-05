@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bun run backend & sleep 1 && bun run frontend",
     "frontend": "cd frontend && bun run dev",
-    "backend": "bun --watch index.ts",
+    "backend": "bun --watch bin/server.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:update": "bun scripts/db-migrate.ts",
@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/sharp": "^0.32.0",
     "drizzle-kit": "^0.31.10",
     "prettier": "^3.8.3"
   },
@@ -24,6 +25,7 @@
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
-    "hono": "4.12.16"
+    "hono": "4.12.16",
+    "sharp": "^0.34.5"
   }
 }

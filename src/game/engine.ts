@@ -1,7 +1,7 @@
 import type { GameState, Player, ChallengeResult } from './types'
-import { opponent, rollDice, diceValue, diceRank, rankDisplay, isMiaRank } from './types'
+import { opponent, rollDice, diceRank, rankDisplay, isMiaRank } from './types'
 
-const STARTING_LIVES = 3
+const STARTING_LIVES = 5
 
 export function newGame(): Pick<
   GameState,
@@ -82,6 +82,7 @@ export function rollDiceAction(
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
   if (!state.currentClaim) return { state, error: 'No claim to roll against' }
+  if (state.currentClaim.value === 20) return { state, error: 'Mia claimed — must give up or look' }
 
   return {
     state: {
@@ -101,6 +102,7 @@ export function raise(
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
   if (!state.currentClaim) return { state, error: 'No claim to raise' }
+  if (state.currentClaim.value === 20) return { state, error: 'Mia claimed — must give up or look' }
   if (value <= state.currentClaim.value) {
     return {
       state,
@@ -128,6 +130,7 @@ export function rollAndRaise(
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
   if (!state.currentClaim) return { state, error: 'No claim to raise' }
+  if (state.currentClaim.value === 20) return { state, error: 'Mia claimed — must give up or look' }
   if (value <= state.currentClaim.value) {
     return {
       state,
@@ -154,6 +157,7 @@ export function passDice(
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
   if (!state.currentClaim) return { state, error: 'No active claim' }
+  if (state.currentClaim.value === 20) return { state, error: 'Mia claimed — must give up or look' }
   if (state.originalCaller === player) {
     return { state, error: 'Dice returned — must challenge or raise' }
   }
@@ -186,11 +190,24 @@ export function resolveChallenge(
     return { state, error: 'Cannot challenge your own claim' }
   }
 
-  const challengerWins = actualValue < claimedValue
+  let challengerWins: boolean
+  let livesLost: number
 
-  let livesLost = 1
-  if (isMiaRank(claimedValue) || isMiaRank(actualValue)) {
-    livesLost = 2
+  if (claimedValue === 20) {
+    // Mia claim special rules
+    if (actualValue === 20) {
+      // Real Mia — looker loses 2
+      challengerWins = false
+      livesLost = 2
+    } else {
+      // Fake Mia — claimer loses 1
+      challengerWins = true
+      livesLost = 1
+    }
+  } else {
+    // Normal challenge
+    challengerWins = actualValue < claimedValue
+    livesLost = 1
   }
 
   let nextState = { ...state }
@@ -211,6 +228,46 @@ export function resolveChallenge(
     challengerWins,
     livesLost,
   }
+
+  nextState.roundPhase = 'challenge_result'
+  nextState.challengeResult = result
+  nextState.challengeAcks = []
+
+  if (nextState.p1Lives <= 0) {
+    nextState.winner = 'p2'
+    nextState.status = 'finished'
+  } else if (nextState.p2Lives <= 0) {
+    nextState.winner = 'p1'
+    nextState.status = 'finished'
+  }
+
+  return { state: nextState, result }
+}
+
+// Give up against a Mia claim — player accepts the claim and loses 1 life
+export function giveUp(
+  state: GameState,
+  player: Player,
+): { state: GameState; result: ChallengeResult } | { state: GameState; error: string } {
+  if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
+  if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
+  if (!state.currentClaim) return { state, error: 'No claim to give up against' }
+  if (state.currentClaim.value !== 20) return { state, error: 'Can only give up against Mia' }
+
+  const result: ChallengeResult = {
+    challenger: player,
+    challenged: state.currentClaim.player,
+    claimedValue: 20,
+    actualValue: -1,
+    dice: [0, 0],
+    challengerWins: false,
+    livesLost: 1,
+    gaveUp: true,
+  }
+
+  const nextState = { ...state }
+  if (player === 'p1') nextState.p1Lives -= 1
+  else nextState.p2Lives -= 1
 
   nextState.roundPhase = 'challenge_result'
   nextState.challengeResult = result
@@ -312,6 +369,7 @@ export function stateForPlayer(state: GameState, player: Player) {
             state.challengeResult.challengerWins
               ? state.challengeResult.challenger === player
               : state.challengeResult.challenged === player,
+          gaveUp: state.challengeResult.gaveUp,
         }
       : null,
     challengeAcks: state.challengeAcks,
