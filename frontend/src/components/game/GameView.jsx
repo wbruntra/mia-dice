@@ -17,6 +17,20 @@ function randomDie() {
   return Math.ceil(Math.random() * 6)
 }
 
+function getActionTypes({
+  showActions,
+  isMiaClaim,
+  hasCurrentClaim,
+  justRolled,
+  isOriginalCaller,
+}) {
+  if (!showActions) return []
+  if (isMiaClaim) return ['give_up', 'lift_cup']
+  if (!hasCurrentClaim) return ['make_claim']
+  if (justRolled) return ['bid']
+  return ['raise_bid', 'reroll_bid', ...(!isOriginalCaller ? ['pass_blind'] : []), 'challenge']
+}
+
 export default function GameView() {
   const { state, connected, error, send, onLeave } = useGame()
   const { showClaimPicker, setShowClaimPicker, pendingAction, setPendingAction, setPendingValue } =
@@ -42,7 +56,7 @@ export default function GameView() {
     }
   }, [])
 
-  function startRollAnimation() {
+  const startRollAnimation = useCallback(() => {
     if (rolling) return
     setRolling(true)
     setJustRolled(true)
@@ -58,24 +72,23 @@ export default function GameView() {
       setAnimDice(null)
     }, 1500)
 
-    doSend({ type: 'roll' })
-  }
+    send({ type: 'roll' })
+    setShowClaimPicker(false)
+    setPendingAction(null)
+    setPendingValue(null)
+  }, [rolling, send, setShowClaimPicker, setPendingAction, setPendingValue])
 
   if (!state) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <p className="text-pirate-parchment/50">
-          {!connected ? 'Connecting...' : 'Loading...'}
-        </p>
+        <p className="text-pirate-parchment/50">{!connected ? 'Connecting...' : 'Loading...'}</p>
       </div>
     )
   }
 
   if (state.status === 'waiting') {
     const joinUrl = `${window.location.origin}${window.location.pathname}?join=${state.id}`
-    return (
-      <WaitingRoom gameId={state.id} joinUrl={joinUrl} onLeave={onLeave} />
-    )
+    return <WaitingRoom gameId={state.id} joinUrl={joinUrl} onLeave={onLeave} />
   }
 
   if (error) {
@@ -86,12 +99,17 @@ export default function GameView() {
   const hasCurrentClaim = state.currentClaim !== null
   const isOriginalCaller = state.originalCaller === state.player
   const isMiaClaim = state.currentClaim?.value === 20
-  const canPass = state.canPass && state.roundPhase === 'claim' && isMyTurn && hasCurrentClaim && !isOriginalCaller && !isMiaClaim
-  const showActions =
-    isMyTurn && state.roundPhase === 'claim' && state.status === 'playing'
+  const canPass =
+    state.canPass &&
+    state.roundPhase === 'claim' &&
+    isMyTurn &&
+    hasCurrentClaim &&
+    !isOriginalCaller &&
+    !isMiaClaim
+  const showActions = isMyTurn && state.roundPhase === 'claim' && state.status === 'playing'
 
-  const me = state.playerStates.find(p => p.isMe)
-  const opponent = state.playerStates.find(p => !p.isMe)
+  const me = state.playerStates.find((p) => p.isMe)
+  const opponent = state.playerStates.find((p) => !p.isMe)
 
   function doSend(move) {
     send(move)
@@ -135,12 +153,50 @@ export default function GameView() {
   const showChallengeResult =
     state.roundPhase === 'challenge_result' || state.roundPhase === 'game_over'
   const showRoundEnd = state.roundPhase === 'round_end'
-  const needChallengeAck =
-    showChallengeResult && !state.challengeAcks.includes(state.player)
+  const needChallengeAck = showChallengeResult && !state.challengeAcks.includes(state.player)
   const needRoundEndAck = showRoundEnd && !state.roundEndAcks.includes(state.player)
 
   const myDice = state.dice
   const currentClaimDisplay = state.currentClaim?.display
+
+  const ACTION_CONFIG = {
+    give_up: { label: 'Give Up', style: 'btn-parchment', onClick: handleGiveUp },
+    lift_cup: { label: 'Lift the Cup', style: 'btn-crimson', onClick: handleChallenge },
+    make_claim: {
+      label: 'Make Claim',
+      style: 'btn-gold',
+      onClick: () => {
+        setPendingAction('claim')
+        setShowClaimPicker(true)
+      },
+    },
+    bid: {
+      label: 'Bid',
+      style: 'btn-gold',
+      onClick: () => {
+        setPendingAction('raise')
+        setShowClaimPicker(true)
+      },
+    },
+    raise_bid: {
+      label: 'Raise Bid',
+      style: 'btn-gold',
+      onClick: () => {
+        setPendingAction('raise')
+        setShowClaimPicker(true)
+      },
+    },
+    reroll_bid: { label: 'Re-Roll & Bid', style: 'btn-ocean', onClick: startRollAnimation },
+    pass_blind: { label: 'Pass Blind', style: 'btn-parchment', onClick: handlePass },
+    challenge: { label: 'Challenge', style: 'btn-crimson', onClick: handleChallenge },
+  }
+  const actions = getActionTypes({
+    showActions,
+    isMiaClaim,
+    hasCurrentClaim,
+    justRolled,
+    isOriginalCaller,
+  }).map((type) => ACTION_CONFIG[type])
 
   return (
     <div className="flex-1 flex flex-col max-w-lg mx-auto w-full px-4 py-6 gap-4 relative">
@@ -168,10 +224,14 @@ export default function GameView() {
           <p className="text-sm text-pirate-parchment/70">{opponent.name}</p>
           <div className="flex gap-0.5 mt-1">
             {Array.from({ length: opponent.lives }, (_, i) => (
-              <span key={i} className="text-red-500 text-lg">&#9829;</span>
+              <span key={i} className="text-red-500 text-lg">
+                &#9829;
+              </span>
             ))}
             {Array.from({ length: Math.max(0, state.startingLives - opponent.lives) }, (_, i) => (
-              <span key={`e-${i}`} className="text-pirate-wood-light/50 text-lg">&#9829;</span>
+              <span key={`e-${i}`} className="text-pirate-wood-light/50 text-lg">
+                &#9829;
+              </span>
             ))}
           </div>
         </div>
@@ -182,7 +242,9 @@ export default function GameView() {
 
       {/* Last action */}
       {state.lastAction && (
-        <p className="text-white text-base font-bold text-center relative z-10">{state.lastAction}</p>
+        <p className="text-white text-base font-bold text-center relative z-10">
+          {state.lastAction}
+        </p>
       )}
 
       {/* Dice Area */}
@@ -235,113 +297,31 @@ export default function GameView() {
           </p>
           <div className="flex gap-0.5 mt-1">
             {Array.from({ length: me.lives }, (_, i) => (
-              <span key={i} className="text-red-500 text-lg">&#9829;</span>
+              <span key={i} className="text-red-500 text-lg">
+                &#9829;
+              </span>
             ))}
             {Array.from({ length: Math.max(0, state.startingLives - me.lives) }, (_, i) => (
-              <span key={`e-${i}`} className="text-pirate-wood-light/50 text-lg">&#9829;</span>
+              <span key={`e-${i}`} className="text-pirate-wood-light/50 text-lg">
+                &#9829;
+              </span>
             ))}
           </div>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="min-h-[52px] flex flex-wrap gap-2 justify-center items-center relative z-10">
-        {/* Mia claim — special options */}
-        {showActions && isMiaClaim && (
-          <>
-            <button onClick={handleGiveUp} className="btn-parchment">
-              Give Up
-            </button>
-            <button onClick={handleChallenge} className="btn-crimson">
-              Look
-            </button>
-          </>
-        )}
-
-        {showActions && !isMiaClaim && !hasCurrentClaim && (
-          <button
-            onClick={() => {
-              setPendingAction('claim')
-              setShowClaimPicker(true)
-            }}
-            className="btn-gold"
-          >
-            Make Claim
-          </button>
-        )}
-
-        {showActions && !isMiaClaim && hasCurrentClaim && justRolled && (
-          <button
-            onClick={() => {
-              setPendingAction('raise')
-              setShowClaimPicker(true)
-            }}
-            className="btn-gold"
-          >
-            Raise
-          </button>
-        )}
-
-        {showActions && !isMiaClaim && hasCurrentClaim && !justRolled && !isOriginalCaller && (
-          <>
-            <button
-              onClick={() => {
-                setPendingAction('raise')
-                setShowClaimPicker(true)
-              }}
-              className="btn-gold"
-            >
-              Raise
-            </button>
-            <button
-              onClick={startRollAnimation}
-              className="btn-ocean"
-            >
-              Roll
-            </button>
-            <button
-              onClick={handlePass}
-              className="btn-parchment"
-            >
-              Pass
-            </button>
-            <button
-              onClick={handleChallenge}
-              className="btn-crimson"
-            >
-              ☠️ Challenge
-            </button>
-          </>
-        )}
-
-        {showActions && !isMiaClaim && hasCurrentClaim && !justRolled && isOriginalCaller && (
-          <>
-            <button
-              onClick={() => {
-                setPendingAction('raise')
-                setShowClaimPicker(true)
-              }}
-              className="btn-gold"
-            >
-              Raise
-            </button>
-            <button
-              onClick={startRollAnimation}
-              className="btn-ocean"
-            >
-              Roll &amp; Raise
-            </button>
-            <button
-              onClick={handleChallenge}
-              className="btn-crimson"
-            >
-              ☠️ Challenge
-            </button>
-          </>
-        )}
-
-        {!showActions && state.roundPhase === 'claim' && !isMyTurn && hasCurrentClaim && (
-          <p className="text-sm text-pirate-parchment/40 italic">Waiting for {opponent.name}...</p>
+      <div className="min-h-[52px] flex items-center justify-center relative z-10">
+        {actions.length > 0 ? (
+          <div className={`w-full grid gap-3 ${{ 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-2' }[actions.length]}`}>
+            {actions.map(({ label, style, onClick }) => (
+              <button key={label} onClick={onClick} className={`${style} w-full`}>{label}</button>
+            ))}
+          </div>
+        ) : (
+          !showActions && state.roundPhase === 'claim' && !isMyTurn && hasCurrentClaim && (
+            <p className="text-sm text-pirate-parchment/40 italic">Waiting for {opponent.name}...</p>
+          )
         )}
       </div>
 
@@ -353,10 +333,7 @@ export default function GameView() {
       )}
 
       {needRoundEndAck && (
-        <RoundEndOverlay
-          result={state.challengeResult}
-          onAck={() => handleAck('round_end')}
-        />
+        <RoundEndOverlay result={state.challengeResult} playerStates={state.playerStates} onAck={() => handleAck('round_end')} />
       )}
 
       {state.roundPhase === 'game_over' && (
@@ -404,14 +381,14 @@ function ChallengeResultOverlay({ result, onAck }) {
         <div className="bg-pirate-wood-light border border-pirate-gold/40 rounded-2xl p-6 max-w-sm w-full text-center">
           <p className="font-pirate text-3xl text-pirate-gold mb-4">🏳️ Gave Up</p>
           <p className="text-pirate-parchment/60 text-sm mb-3">
-            {result.iChallenged
-              ? 'You folded against Mia.'
-              : 'Opponent gave up against your Mia!'}
+            {result.iChallenged ? 'You folded against Mia.' : 'Opponent gave up against your Mia!'}
           </p>
           <p className="text-red-400 text-sm mb-4">
             {result.iChallenged ? 'You' : 'Opponent'} lost {result.livesLost} life
           </p>
-          <button onClick={onAck} className="btn-gold">Continue</button>
+          <button onClick={onAck} className="btn-gold">
+            Continue
+          </button>
         </div>
       </div>
     )
@@ -423,7 +400,6 @@ function ChallengeResultOverlay({ result, onAck }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
       <div className="bg-pirate-wood-light border border-pirate-gold/40 rounded-2xl p-6 max-w-sm w-full text-center">
-
         <div className="h-10 flex items-center justify-center mb-4">
           {phase === 'dramatic' && (
             <p className="font-pirate text-3xl text-pirate-gold animate-pulse">Challenge!</p>
@@ -441,10 +417,11 @@ function ChallengeResultOverlay({ result, onAck }) {
         <div className="bg-pirate-wood/40 rounded-xl px-4 py-3 mb-2">
           <p className="text-xs text-pirate-parchment/50 uppercase tracking-wide mb-2">Claimed</p>
           <div className="flex justify-center gap-3">
-            {claimedDice
-              ? claimedDice.map((v, i) => <Die key={i} value={v} size={56} />)
-              : <span className="text-pirate-parchment/40 text-sm">—</span>
-            }
+            {claimedDice ? (
+              claimedDice.map((v, i) => <Die key={i} value={v} size={56} />)
+            ) : (
+              <span className="text-pirate-parchment/40 text-sm">—</span>
+            )}
           </div>
           <p className="font-pirate text-lg text-pirate-gold mt-2">{result.claimedValue}</p>
         </div>
@@ -455,7 +432,11 @@ function ChallengeResultOverlay({ result, onAck }) {
           <p className="text-xs text-pirate-parchment/50 uppercase tracking-wide mb-2">Actual</p>
           <div className="flex justify-center gap-3">
             {result.dice.map((value, i) => (
-              <div key={i} className="relative overflow-hidden rounded-lg bg-pirate-wood" style={{ width: 56, height: 56 }}>
+              <div
+                key={i}
+                className="relative overflow-hidden rounded-lg bg-pirate-wood"
+                style={{ width: 56, height: 56 }}
+              >
                 <div style={{ visibility: cardbackUp ? 'visible' : 'hidden' }}>
                   <Die value={value} size={56} />
                 </div>
@@ -500,21 +481,18 @@ function ChallengeResultOverlay({ result, onAck }) {
   )
 }
 
-function RoundEndOverlay({ result, onAck }) {
+function RoundEndOverlay({ result, playerStates, onAck }) {
   if (!result) return null
+  const winnerIndex = result.challengerWins ? result.challenger : result.challenged
+  const winner = playerStates[winnerIndex]?.name ?? winnerIndex
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
       <div className="bg-pirate-wood-light border border-pirate-gold/40 rounded-2xl p-6 max-w-sm w-full text-center">
         <p className="font-pirate text-3xl text-pirate-gold mb-4">⚓ Round Over</p>
         <p className="text-pirate-parchment/60 text-sm">
-          {result.challengerWins
-            ? 'Challenger caught the bluff!'
-            : 'Challenger was wrong!'}
+          {winner} won the challenge!
         </p>
-        <button
-          onClick={onAck}
-          className="mt-4 btn-gold"
-        >
+        <button onClick={onAck} className="mt-4 btn-gold">
           Next Round
         </button>
       </div>
@@ -523,8 +501,8 @@ function RoundEndOverlay({ result, onAck }) {
 }
 
 function GameOverOverlay({ winner, playerStates, onLeave }) {
-  const me = playerStates.find(p => p.isMe)
-  const opponent = playerStates.find(p => !p.isMe)
+  const me = playerStates.find((p) => p.isMe)
+  const opponent = playerStates.find((p) => !p.isMe)
   const iWon = winner === me.name
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
@@ -536,10 +514,7 @@ function GameOverOverlay({ winner, playerStates, onLeave }) {
         <p className="text-pirate-parchment/50 text-sm mb-4">
           {iWon ? 'The seas are yours, captain!' : 'Walk the plank...'}
         </p>
-        <button
-          onClick={onLeave}
-          className="btn-gold"
-        >
+        <button onClick={onLeave} className="btn-gold">
           Back to Lobby
         </button>
       </div>
@@ -555,7 +530,12 @@ function ClaimPickerModal({ currentClaim, myDice, onSelect, onClose }) {
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col p-4">
       <div className="flex items-center justify-between mb-4">
         <p className="font-pirate text-xl text-pirate-gold">Choose Claim</p>
-        <button onClick={onClose} className="text-pirate-parchment/40 hover:text-pirate-parchment text-2xl">&times;</button>
+        <button
+          onClick={onClose}
+          className="text-pirate-parchment/40 hover:text-pirate-parchment text-2xl"
+        >
+          &times;
+        </button>
       </div>
       {currentClaim && (
         <p className="text-sm text-pirate-parchment/50 mb-3">
@@ -570,7 +550,7 @@ function ClaimPickerModal({ currentClaim, myDice, onSelect, onClose }) {
             <button
               key={rank.value}
               onClick={() => onSelect(rank.value)}
-              className={`relative py-3 px-2 rounded-xl text-center font-bold text-lg transition-colors ${
+              className={`py-3 px-2 rounded-xl text-center font-bold text-lg transition-colors ${
                 rank.label === 'Mia'
                   ? 'bg-pirate-gold hover:bg-pirate-gold-light text-black font-pirate'
                   : rank.value >= 14
@@ -579,9 +559,7 @@ function ClaimPickerModal({ currentClaim, myDice, onSelect, onClose }) {
               }`}
             >
               {rank.label}
-              {isMyRoll && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500" />
-              )}
+              <p className={`text-xs font-normal mt-0.5 ${isMyRoll ? 'text-blue-400' : 'invisible'}`}>your roll</p>
             </button>
           )
         })}
@@ -613,7 +591,9 @@ function WaitingRoom({ gameId, joinUrl, onLeave }) {
     <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4 relative">
       {/* Background overlay removed - handled in App.jsx */}
       <p className="font-pirate text-2xl text-pirate-gold relative z-10">Game Created</p>
-      <p className="text-pirate-parchment/50 text-sm relative z-10">Share this link with your opponent:</p>
+      <p className="text-pirate-parchment/50 text-sm relative z-10">
+        Share this link with your opponent:
+      </p>
 
       <div className="w-full max-w-sm bg-pirate-wood/60 border border-pirate-gold/20 rounded-xl p-3 flex items-center gap-2 relative z-10">
         <p className="flex-1 text-sm font-mono text-pirate-ocean truncate">{joinUrl}</p>
@@ -633,11 +613,10 @@ function WaitingRoom({ gameId, joinUrl, onLeave }) {
         or code: <span className="font-mono text-pirate-parchment/50">{gameId}</span>
       </p>
 
-      <p className="text-pirate-parchment/40 text-sm relative z-10">Waiting for opponent to join...</p>
-      <button
-        onClick={onLeave}
-        className="mt-4 btn-parchment relative z-10"
-      >
+      <p className="text-pirate-parchment/40 text-sm relative z-10">
+        Waiting for opponent to join...
+      </p>
+      <button onClick={onLeave} className="mt-4 btn-parchment relative z-10">
         Leave
       </button>
     </div>

@@ -53,21 +53,21 @@ body,
 
 /* Pirate button base styles */
 .btn-gold {
-  @apply px-4 py-3 bg-pirate-gold hover:bg-pirate-gold-light text-black font-semibold
+  @apply px-4 py-4 bg-pirate-gold hover:bg-pirate-gold-light text-black font-semibold
          rounded-xl transition-all active:scale-95 shadow-lg shadow-pirate-gold/20;
 }
 
 .btn-ocean {
-  @apply px-4 py-3 bg-pirate-ocean hover:bg-pirate-ocean/80 text-white font-semibold
+  @apply px-4 py-4 bg-pirate-ocean hover:bg-pirate-ocean/80 text-white font-semibold
          rounded-xl transition-all active:scale-95 shadow-md;
 }
 
 .btn-crimson {
-  @apply px-4 py-3 bg-pirate-crimson hover:bg-pirate-crimson/80 text-white font-semibold
+  @apply px-4 py-4 bg-pirate-crimson hover:bg-pirate-crimson/80 text-white font-semibold
          rounded-xl transition-all active:scale-95 shadow-md;
 }
 
 .btn-parchment {
-  @apply px-4 py-3 bg-pirate-wood/60 hover:bg-pirate-wood/80 text-pirate-parchment/80
+  @apply px-4 py-4 bg-pirate-wood/60 hover:bg-pirate-wood/80 text-pirate-parchment/80
          font-semibold rounded-xl transition-all active:scale-95 border border-pirate-gold/20;
 }
