@@ -53,8 +53,8 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center px-4 bg-gradient-to-b from-pirate-navy via-pirate-navy-light to-pirate-navy">
-      <div className="bg-pirate fixed inset-0 z-0 pointer-events-none" />
+    <div className="min-h-dvh flex flex-col items-center justify-center px-4 bg-gradient-to-b from-pirate-navy/70 via-pirate-navy-light/70 to-pirate-navy/70">
+      <div className="bg-pirate" />
       <div className="w-full max-w-sm text-center relative z-10">
         <h1 className="font-pirate text-5xl text-pirate-gold mb-2">🏴‍☠️ Mia 🏴‍☠️</h1>
         <p className="text-pirate-parchment/50 text-sm mb-8">A classic bluffing dice game</p>

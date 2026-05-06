@@ -145,7 +145,7 @@ export default function GameView() {
   return (
     <div className="flex-1 flex flex-col max-w-lg mx-auto w-full px-4 py-6 gap-4 relative">
       {/* Background overlay */}
-      <div className="bg-pirate" />
+      {/* Background overlay removed - handled in App.jsx */}
 
       {/* Header */}
       <header className="flex items-center justify-between relative z-10">
@@ -155,7 +155,7 @@ export default function GameView() {
         >
           Leave
         </button>
-        <span className="font-pirate text-pirate-gold text-base">⚓ Round {state.roundNumber}</span>
+        <span className="font-pirate text-pirate-gold text-base">Round {state.roundNumber}</span>
         <span className="text-pirate-parchment/30 text-sm">
           {state.status === 'waiting' && 'Waiting for opponent...'}
           {!connected && ' (reconnecting)'}
@@ -182,7 +182,7 @@ export default function GameView() {
 
       {/* Last action */}
       {state.lastAction && (
-        <p className="text-white text-sm text-center relative z-10">{state.lastAction}</p>
+        <p className="text-white text-base font-bold text-center relative z-10">{state.lastAction}</p>
       )}
 
       {/* Dice Area */}
@@ -611,7 +611,7 @@ function WaitingRoom({ gameId, joinUrl, onLeave }) {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4 relative">
-      <div className="bg-pirate" />
+      {/* Background overlay removed - handled in App.jsx */}
       <p className="font-pirate text-2xl text-pirate-gold relative z-10">Game Created</p>
       <p className="text-pirate-parchment/50 text-sm relative z-10">Share this link with your opponent:</p>
 

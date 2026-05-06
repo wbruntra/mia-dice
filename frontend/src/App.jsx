@@ -65,9 +65,10 @@ export default function App() {
     <GameContext.Provider
       value={{ state, connected, error, send, onLeave: handleLeave, gameId, playerName }}
     >
+      <div className="bg-pirate" />
       <GameUIProvider>
         <Toaster position="top-center" richColors />
-        <div className="min-h-dvh flex flex-col bg-gradient-to-b from-pirate-navy via-pirate-navy-light to-pirate-navy">
+        <div className="min-h-dvh flex flex-col bg-gradient-to-b from-pirate-navy/70 via-pirate-navy-light/70 to-pirate-navy/70">
           <GameView />
         </div>
       </GameUIProvider>
