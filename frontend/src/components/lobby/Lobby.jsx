@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import RulesModal from './RulesModal'
 
 const API = '/api'
 
@@ -8,6 +9,7 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
   const [loading, setLoading] = useState(false)
   const [showJoin, setShowJoin] = useState(!!joinId)
   const [joinCode, setJoinCode] = useState(joinId || '')
+  const [showRules, setShowRules] = useState(false)
 
   async function createGame() {
     setLoading(true)
@@ -54,16 +56,23 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
 
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-4 bg-gradient-to-b from-pirate-navy/70 via-pirate-navy-light/70 to-pirate-navy/70">
+      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
       <div className="bg-pirate" />
       <div className="w-full max-w-sm text-center relative z-10">
         <h1 className="font-pirate text-5xl text-pirate-gold mb-2">🏴‍☠️ Mia 🏴‍☠️</h1>
-        <p className="text-pirate-parchment/50 text-sm mb-8">A classic bluffing dice game</p>
+        <p className="text-pirate-parchment/50 text-sm mb-1">A classic bluffing dice game</p>
+        <button
+          onClick={() => setShowRules(true)}
+          className="text-pirate-gold/70 hover:text-pirate-gold text-xs underline underline-offset-2 transition-colors mb-8"
+        >
+          How to Play
+        </button>
 
         {!showJoin ? (
           <div className="flex flex-col gap-3">
             <input
               type="text"
-              placeholder="Your name (optional)"
+              placeholder="Your name"
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, 20))}
               maxLength={20}
@@ -87,7 +96,7 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
           <div className="flex flex-col gap-3">
             <input
               type="text"
-              placeholder="Your name (optional)"
+              placeholder="Your name"
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, 20))}
               maxLength={20}
