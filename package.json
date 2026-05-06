@@ -10,6 +10,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:update": "bun scripts/db-migrate.ts",
+    "db:cleanup": "bun scripts/cleanup-games.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "train": "bun scripts/train.ts",

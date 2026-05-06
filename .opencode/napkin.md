@@ -26,3 +26,4 @@
 - When challenged: actualRank < claimedRank means claim was a lie → claimer loses
 - Full circle: if `originalCaller === turnPlayer`, they cannot pass (must challenge or raise)
 - DB: `mexico.db`, drizzle migrations in `drizzle/`
+- Cleanup: `src/services/cleanup.ts` exports `cleanupOldGames()` — deletes `pending` games older than 10 min. Server auto-runs it every 5 min. Also callable via `bun run db:cleanup`.
