@@ -4,8 +4,9 @@ import { games } from '../db/schema'
 import { eq } from 'drizzle-orm'
 import { stateForPlayer } from '../game/engine'
 import { rollDice } from '../game/types'
-import { loadGame, saveGameMetadata, reconstructState } from '../db/game-store'
+import { loadGame, saveGameMetadata, reconstructState, listPendingGames } from '../db/game-store'
 import { startGame } from '../services/game'
+import { broadcastLobbyUpdate } from '../services/connections'
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 10)
@@ -25,12 +26,15 @@ app.post('/api/games', async (c) => {
     id: gameId,
     players: JSON.stringify(players),
     startingLives: 5,
+    status: vsCpu ? 'active' : 'pending',
     createdAt: new Date().toISOString(),
   })
 
   if (vsCpu) {
     const dice = rollDice()
     await startGame(gameId, dice, 1)
+  } else {
+    await broadcastLobbyUpdate()
   }
 
   return c.json({ gameId, playerName })
@@ -47,12 +51,18 @@ app.post('/api/games/:id/join', async (c) => {
   if (metadata.players.includes(playerName)) return c.json({ error: 'Name already taken' }, 400)
 
   const newPlayers = [...metadata.players, playerName]
-  await saveGameMetadata(gameId, { players: newPlayers })
+  await saveGameMetadata(gameId, { players: newPlayers, status: 'active' })
 
   const dice = rollDice()
   await startGame(gameId, dice)
+  await broadcastLobbyUpdate()
 
   return c.json({ gameId, playerName })
+})
+
+app.get('/api/games', async (c) => {
+  const pendingGames = await listPendingGames()
+  return c.json(pendingGames)
 })
 
 app.get('/api/games/:id', async (c) => {

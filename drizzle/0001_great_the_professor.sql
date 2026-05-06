@@ -1,0 +1,1 @@
+ALTER TABLE `games` ADD `status` text DEFAULT 'pending' NOT NULL;

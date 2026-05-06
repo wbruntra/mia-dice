@@ -5,6 +5,7 @@ export const games = sqliteTable('games', {
   players: text('players').notNull().default('[]'),
   startingLives: integer('starting_lives').notNull().default(5),
   winner: text('winner'),
+  status: text('status', { enum: ['pending', 'active', 'finished', 'abandoned'] }).notNull().default('pending'),
   createdAt: text('created_at').notNull(),
 })
 

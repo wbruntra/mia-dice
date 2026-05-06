@@ -4,7 +4,7 @@ import { eq, sql, asc } from 'drizzle-orm'
 import type { GameState, StoredMove } from '../game/types'
 import { blankState, applyMove } from '../game/engine'
 
-export async function loadGame(id: string): Promise<{ id: string; players: string[]; startingLives: number; winner: string | null } | null> {
+export async function loadGame(id: string): Promise<{ id: string; players: string[]; startingLives: number; winner: string | null; status: string } | null> {
   const rows = await db.select().from(games).where(eq(games.id, id))
   if (rows.length === 0) return null
   const row = rows[0]!
@@ -13,7 +13,20 @@ export async function loadGame(id: string): Promise<{ id: string; players: strin
     players: JSON.parse(row.players || '[]'),
     startingLives: row.startingLives,
     winner: row.winner,
+    status: row.status,
   }
+}
+
+export async function listPendingGames(): Promise<Array<{ id: string; playerName: string; createdAt: string }>> {
+  const rows = await db
+    .select()
+    .from(games)
+    .where(eq(games.status, 'pending'))
+    .orderBy(asc(games.createdAt))
+  return rows.map((row) => {
+    const players = JSON.parse(row.players || '[]')
+    return { id: row.id, playerName: players[0] || 'Unknown', createdAt: row.createdAt }
+  })
 }
 
 export async function insertMove(
@@ -73,11 +86,12 @@ export async function reconstructState(gameId: string): Promise<GameState | null
   return state
 }
 
-export async function saveGameMetadata(id: string, updates: { players?: string[]; winner?: string | null; startingLives?: number }) {
+export async function saveGameMetadata(id: string, updates: { players?: string[]; winner?: string | null; startingLives?: number; status?: string }) {
   const set: Record<string, unknown> = {}
   if (updates.players) set.players = JSON.stringify(updates.players)
   if (updates.winner !== undefined) set.winner = updates.winner
   if (updates.startingLives !== undefined) set.startingLives = updates.startingLives
+  if (updates.status !== undefined) set.status = updates.status
 
   await db.update(games).set(set).where(eq(games.id, id))
 }

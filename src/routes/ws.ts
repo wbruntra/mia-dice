@@ -1,7 +1,10 @@
 import type { ServerWebSocket } from 'bun'
 import { stateForPlayer } from '../game/engine'
-import { loadGame, reconstructState } from '../db/game-store'
-import { registerConnection, unregisterConnection, broadcast } from '../services/connections'
+import { loadGame, reconstructState, listPendingGames, saveGameMetadata } from '../db/game-store'
+import {
+  registerConnection, unregisterConnection, broadcast,
+  registerLobbyConnection, unregisterLobbyConnection, broadcastLobbyUpdate,
+} from '../services/connections'
 import { handleMove } from '../services/game'
 import type { Move } from '../services/game'
 
@@ -21,6 +24,13 @@ export function wsOpen(ws: ServerWebSocket<WsData>) {
 export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string | Buffer) {
   try {
     const msg = JSON.parse(typeof rawMessage === 'string' ? rawMessage : rawMessage.toString())
+
+    if (msg.type === 'lobby_join') {
+      registerLobbyConnection(ws)
+      const games = await listPendingGames()
+      send(ws, { type: 'lobby_games', games })
+      return
+    }
 
     if (msg.type === 'join') {
       const metadata = await loadGame(msg.gameId)
@@ -67,7 +77,17 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
   }
 }
 
-export function wsClose(ws: ServerWebSocket<WsData>) {
+export async function wsClose(ws: ServerWebSocket<WsData>) {
+  unregisterLobbyConnection(ws)
   const { gameId, player } = ws.data
-  if (gameId && player !== null) unregisterConnection(gameId, player)
+  if (!gameId || player === null) return
+  unregisterConnection(gameId, player)
+  // If the game creator disconnects while no one has joined yet, abandon the game
+  if (player === 0) {
+    const metadata = await loadGame(gameId)
+    if (metadata && metadata.status === 'pending') {
+      await saveGameMetadata(gameId, { status: 'abandoned' })
+      await broadcastLobbyUpdate()
+    }
+  }
 }
