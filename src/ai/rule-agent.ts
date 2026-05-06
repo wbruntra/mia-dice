@@ -27,7 +27,7 @@ export class RuleAgent implements Agent {
     if (state.originalCaller === player) {
       const actualRank = state.dice ? diceRank(state.dice) : claim.value
       if (actualRank < claim.value) {
-        return Math.random() < 0.93 ? { type: 'challenge' } : { type: 'roll_raise', value: Math.min(20, claim.value + 1) }
+        return { type: 'challenge' }
       }
       const bluffExtra = Math.random() < 0.35 ? Math.floor(Math.random() * 3) + 1 : 0
       return { type: 'roll_raise', value: Math.min(20, claim.value + 1 + bluffExtra) }
@@ -40,9 +40,13 @@ export class RuleAgent implements Agent {
       return { type: 'roll_raise', value: Math.min(20, claim.value + 1) }
     }
 
-    const challengeProb = claim.value <= 7
-      ? 0.25
-      : 0.20 + (claim.value / 20) * 0.30
+    const challengeProb = claim.value <= 0
+      ? 0
+      : claim.value <= 3
+        ? 0.05
+        : claim.value <= 7
+          ? 0.15
+          : 0.20 + (claim.value / 20) * 0.30
 
     if (Math.random() < challengeProb) return { type: 'challenge' }
     if (Math.random() < 0.15) return { type: 'pass' }

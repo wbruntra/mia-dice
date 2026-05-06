@@ -16,6 +16,9 @@
 - Only the `originalCaller` sees dice via `stateForPlayer` — others see hidden dice
 - Auto-advance timers for challenge_result and round_end phases handle disconnected players
 
+---
+| 2026-05-06 | self | AI challenged rank 0 (31) because `claim.value <= 7` bucket had 25% challenge rate | Rank 0 (31) is the minimum possible roll — can't be a bluff about being too high, so challengeProb should be 0. Fixed with tiered challengeProb: 0/0.05/0.15/scale in both `getAIMove()` and `RuleAgent` |
+
 ## Domain Notes
 
 - Mia is a 2-player shared-dice bluffing game. Two dice, one cup, passed back and forth.

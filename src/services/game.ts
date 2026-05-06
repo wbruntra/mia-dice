@@ -48,8 +48,7 @@ function getAIMove(state: GameState): Move {
   if (state.originalCaller === state.turnPlayer) {
     const actualRank = state.dice ? diceRank(state.dice) : claim.value
     if (actualRank < claim.value) {
-      // We know the claim is inflated — challenge almost always (small variance for unpredictability)
-      return Math.random() < 0.93 ? { type: 'challenge' } : { type: 'roll_raise', value: Math.min(20, claim.value + 1) }
+      return { type: 'challenge' }
     }
     // Our dice support the claim — raising is the only sensible play
     const bluffExtra = Math.random() < 0.35 ? Math.floor(Math.random() * 3) + 1 : 0
@@ -65,11 +64,16 @@ function getAIMove(state: GameState): Move {
     return { type: 'roll_raise', value: Math.min(20, claim.value + 1) }
   }
 
-  // Low values (31–53, ranks 0–7): easy to beat by rolling but also worth challenging more
+  // Low claims (31–42, ranks 0–3): almost certainly truthful — challenging is a bad bet
+  // Mid-low (43–53, ranks 4–7): some room for bluff, increase a bit
   // Mid/high non-doubles (54–65, ranks 8–13): scale up toward 45%
-  const challengeProb = claim.value <= 7
-    ? 0.25
-    : 0.20 + (claim.value / 20) * 0.30
+  const challengeProb = claim.value <= 0
+    ? 0
+    : claim.value <= 3
+      ? 0.05
+      : claim.value <= 7
+        ? 0.15
+        : 0.20 + (claim.value / 20) * 0.30
 
   if (Math.random() < challengeProb) return { type: 'challenge' }
 
