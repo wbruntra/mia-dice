@@ -357,9 +357,9 @@ export function applyMove(
 
   switch (move.type) {
     case 'game_start': {
-      const { dice } = (move.data || {}) as { dice?: [number, number] }
+      const { dice, cpuPlayer } = (move.data || {}) as { dice?: [number, number]; cpuPlayer?: number }
       if (!dice) return { state, error: 'game_start missing dice' }
-      return { state: { ...state, ...newGame(dice), lastAction: 'Game started' } }
+      return { state: { ...state, ...newGame(dice), cpuPlayer: cpuPlayer ?? null, lastAction: 'Game started' } }
     }
 
     case 'claim': {

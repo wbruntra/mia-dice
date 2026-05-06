@@ -3,7 +3,7 @@ import {
   stateForPlayer,
 } from '../game/engine'
 import type { GameState, StoredMove } from '../game/types'
-import { rollDice } from '../game/types'
+import { rollDice, diceRank } from '../game/types'
 import { insertMove, reconstructState } from '../db/game-store'
 import { broadcast } from './connections'
 
@@ -20,6 +20,46 @@ export type Move =
 
 const CHALLENGE_ACK_TIMEOUT_MS = 5000
 const ROUND_END_ACK_TIMEOUT_MS = 4000
+const CPU_MOVE_DELAY_MS = 1200
+
+function getAIMove(state: GameState): Move {
+  const claim = state.currentClaim
+
+  if (!claim) {
+    const actualRank = state.dice ? diceRank(state.dice) : 5
+    const bluffUp = Math.random() < 0.3
+    const claimVal = bluffUp
+      ? Math.min(20, actualRank + Math.floor(Math.random() * 3) + 1)
+      : actualRank
+    return { type: 'claim', value: claimVal }
+  }
+
+  if (claim.value === 20) {
+    return Math.random() < 0.45 ? { type: 'give_up' } : { type: 'challenge' }
+  }
+
+  const challengeProb = 0.1 + (claim.value / 20) * 0.45
+  if (Math.random() < challengeProb) {
+    return { type: 'challenge' }
+  }
+
+  if (claim.value >= 20) return { type: 'challenge' }
+
+  const minClaim = claim.value + 1
+  const bluffExtra = Math.random() < 0.35 ? Math.floor(Math.random() * 3) + 1 : 0
+  const claimVal = Math.min(20, minClaim + bluffExtra)
+  return { type: 'roll_raise', value: claimVal }
+}
+
+function scheduleAIMove(gameId: string) {
+  setTimeout(async () => {
+    const state = await reconstructState(gameId)
+    if (!state || state.cpuPlayer === null) return
+    if (state.turnPlayer !== state.cpuPlayer) return
+    if (state.roundPhase !== 'claim' || state.status !== 'playing') return
+    await handleMove(gameId, state.cpuPlayer, getAIMove(state))
+  }, CPU_MOVE_DELAY_MS)
+}
 
 const challengeTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const roundEndTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -74,15 +114,21 @@ function scheduleRoundEndAutoAdvance(gameId: string) {
       const next = await reconstructState(gameId)
       if (!next) return
       broadcast(next)
+      if (next.cpuPlayer !== null && next.turnPlayer === next.cpuPlayer && next.roundPhase === 'claim' && next.status === 'playing') {
+        scheduleAIMove(gameId)
+      }
     }, ROUND_END_ACK_TIMEOUT_MS),
   )
 }
 
-export async function startGame(gameId: string, dice: [number, number]) {
-  await insertMove(gameId, 'game_start', null, { dice })
+export async function startGame(gameId: string, dice: [number, number], cpuPlayer?: number) {
+  await insertMove(gameId, 'game_start', null, { dice, ...(cpuPlayer !== undefined ? { cpuPlayer } : {}) })
   const state = await reconstructState(gameId)
   if (!state) throw new Error('Failed to reconstruct state after game_start')
   broadcast(state)
+  if (cpuPlayer !== undefined && state.turnPlayer === cpuPlayer && state.roundPhase === 'claim') {
+    scheduleAIMove(gameId)
+  }
 }
 
 function buildStoredMove(
@@ -135,12 +181,17 @@ export async function handleMove(
   // Insert the move
   await insertMove(gameId, stored.type, stored.player !== undefined ? stored.player : null, stored.data)
 
-  // Apply to get the new state (same as validation result)
   broadcast(validation.state)
 
-  // Schedule auto-advance timers
   if (validation.state.roundPhase === 'challenge_result') {
     scheduleChallengeAutoAdvance(gameId)
+  } else if (
+    validation.state.cpuPlayer !== null &&
+    validation.state.turnPlayer === validation.state.cpuPlayer &&
+    validation.state.roundPhase === 'claim' &&
+    validation.state.status === 'playing'
+  ) {
+    scheduleAIMove(gameId)
   }
 
   return { ok: true }

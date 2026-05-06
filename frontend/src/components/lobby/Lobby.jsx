@@ -32,6 +32,27 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
     }
   }
 
+  async function createVsCPU() {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API}/games`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() || undefined, cpu: true }),
+      })
+      const data = await res.json()
+      if (data.error) {
+        toast.error(data.error)
+      } else {
+        onNavigateToGame(data.gameId, data.playerName)
+      }
+    } catch (e) {
+      toast.error('Failed to create game')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function joinGame() {
     if (!joinCode.trim()) return
     setLoading(true)
@@ -84,6 +105,13 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
               className="w-full btn-gold disabled:opacity-50"
             >
               Create Game
+            </button>
+            <button
+              onClick={createVsCPU}
+              disabled={loading}
+              className="w-full btn-ocean disabled:opacity-50"
+            >
+              vs Computer
             </button>
             <button
               onClick={() => setShowJoin(true)}

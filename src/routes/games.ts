@@ -17,13 +17,21 @@ app.post('/api/games', async (c) => {
   const body = await c.req.json().catch(() => ({}))
   const gameId = generateId()
   const playerName = (body.name || '').trim().slice(0, 20) || 'Player 1'
+  const vsCpu = !!body.cpu
+
+  const players = vsCpu ? [playerName, 'Computer'] : [playerName]
 
   await db.insert(games).values({
     id: gameId,
-    players: JSON.stringify([playerName]),
+    players: JSON.stringify(players),
     startingLives: 5,
     createdAt: new Date().toISOString(),
   })
+
+  if (vsCpu) {
+    const dice = rollDice()
+    await startGame(gameId, dice, 1)
+  }
 
   return c.json({ gameId, playerName })
 })
