@@ -34,21 +34,51 @@ function getAIMove(state: GameState): Move {
     return { type: 'claim', value: claimVal }
   }
 
+  // Mia: challenge rate depends on lives — at 1 life, giving up is strictly worse (guaranteed loss)
   if (claim.value === 20) {
-    return Math.random() < 0.45 ? { type: 'give_up' } : { type: 'challenge' }
+    const myLives = state.lives[state.turnPlayer!]
+    const opLives = state.lives[1 - state.turnPlayer!]
+    if (myLives === 1) return { type: 'challenge' }
+    const challengeProb = opLives === 1 ? 0.70 : opLives <= 2 ? 0.50 : 0.25
+    return Math.random() < challengeProb ? { type: 'challenge' } : { type: 'give_up' }
   }
 
-  const challengeProb = 0.1 + (claim.value / 20) * 0.45
-  if (Math.random() < challengeProb) {
-    return { type: 'challenge' }
+  // Respond as original caller: originalCaller is only set via makeClaim or rollAndRaise,
+  // both of which write that player's dice into state.dice — so this is the CPU's own roll.
+  if (state.originalCaller === state.turnPlayer) {
+    const actualRank = state.dice ? diceRank(state.dice) : claim.value
+    if (actualRank < claim.value) {
+      // We know the claim is inflated — challenge almost always (small variance for unpredictability)
+      return Math.random() < 0.93 ? { type: 'challenge' } : { type: 'roll_raise', value: Math.min(20, claim.value + 1) }
+    }
+    // Our dice support the claim — raising is the only sensible play
+    const bluffExtra = Math.random() < 0.35 ? Math.floor(Math.random() * 3) + 1 : 0
+    return { type: 'roll_raise', value: Math.min(20, claim.value + 1 + bluffExtra) }
   }
 
-  if (claim.value >= 20) return { type: 'challenge' }
+  // Respond without dice visibility: use heuristics
+  // Doubles (66=14 through 11=19): rolling to beat requires another double or Mia (~17% at best)
+  if (claim.value >= 14) {
+    const r = Math.random()
+    if (r < 0.78) return { type: 'challenge' }
+    if (r < 0.93) return { type: 'pass' }
+    return { type: 'roll_raise', value: Math.min(20, claim.value + 1) }
+  }
+
+  // Low values (31–53, ranks 0–7): easy to beat by rolling but also worth challenging more
+  // Mid/high non-doubles (54–65, ranks 8–13): scale up toward 45%
+  const challengeProb = claim.value <= 7
+    ? 0.25
+    : 0.20 + (claim.value / 20) * 0.30
+
+  if (Math.random() < challengeProb) return { type: 'challenge' }
+
+  // Occasionally pass without rerolling to keep the opponent honest
+  if (Math.random() < 0.15) return { type: 'pass' }
 
   const minClaim = claim.value + 1
   const bluffExtra = Math.random() < 0.35 ? Math.floor(Math.random() * 3) + 1 : 0
-  const claimVal = Math.min(20, minClaim + bluffExtra)
-  return { type: 'roll_raise', value: claimVal }
+  return { type: 'roll_raise', value: Math.min(20, minClaim + bluffExtra) }
 }
 
 function scheduleAIMove(gameId: string) {

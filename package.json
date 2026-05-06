@@ -12,6 +12,7 @@
     "db:update": "bun scripts/db-migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "train": "bun scripts/train.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,html,md}\" \"!**/node_modules/**\" \"!**/dist/**\" \"!**/*.lock\" \"!**/mexico.db\""
   },
   "devDependencies": {
