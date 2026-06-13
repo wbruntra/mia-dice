@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import RulesModal from './RulesModal'
 import PendingGamesList from './PendingGamesList'
+import { loadSession, clearSession } from '../../App'
 
 const API = '/api'
 
@@ -12,6 +13,11 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
   const [joinCode, setJoinCode] = useState(joinId || '')
   const [showRules, setShowRules] = useState(false)
   const [promptGameId, setPromptGameId] = useState(null)
+  const [savedSession, setSavedSession] = useState(null)
+
+  useEffect(() => {
+    setSavedSession(loadSession())
+  }, [])
 
   async function createGame() {
     setLoading(true)
@@ -177,6 +183,31 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
             >
               Join Game
             </button>
+            {savedSession && (
+              <div className="mt-4 p-3 bg-pirate-wood/60 border border-pirate-gold/20 rounded-xl">
+                <p className="text-pirate-parchment/50 text-xs uppercase tracking-wider mb-2">
+                  Active Game
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onNavigateToGame(savedSession.gameId, savedSession.playerName)}
+                    className="flex-1 btn-gold text-sm"
+                  >
+                    Rejoin as {savedSession.playerName}
+                  </button>
+                  <button
+                    onClick={() => {
+                      clearSession()
+                      setSavedSession(null)
+                    }}
+                    className="px-3 py-2 text-pirate-parchment/50 hover:text-pirate-parchment text-sm"
+                    title="Forget this game"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
             <PendingGamesList
               currentName={name}
               onJoinGame={joinSpecificGame}

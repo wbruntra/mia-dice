@@ -6,6 +6,29 @@ import { useWebSocket } from './hooks/useWebSocket'
 import Lobby from './components/lobby/Lobby'
 import GameView from './components/game/GameView'
 
+const SESSION_KEY = 'mia-active-session'
+
+export function saveSession(gameId, playerName) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, playerName }))
+  } catch {}
+}
+
+export function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+export function clearSession() {
+  try {
+    localStorage.removeItem(SESSION_KEY)
+  } catch {}
+}
+
 function parseRoute() {
   const params = new URLSearchParams(window.location.search)
   const gameId = params.get('game')
@@ -45,6 +68,19 @@ function navigateToLobby() {
 
 export default function App() {
   const { gameId, playerName, joinId } = useRouter()
+
+  // Restore a saved session if the user lands on the base path
+  useEffect(() => {
+    if (gameId && playerName) {
+      saveSession(gameId, playerName)
+      return
+    }
+    const session = loadSession()
+    if (session?.gameId && session?.playerName) {
+      navigateToGame(session.gameId, session.playerName)
+    }
+  }, [gameId, playerName])
+
   const { state, connected, error, send } = useWebSocket(gameId, playerName)
 
   if (!gameId || !playerName) {
@@ -57,13 +93,14 @@ export default function App() {
     )
   }
 
-  function handleLeave() {
+  function handleLeaveGame() {
+    clearSession()
     navigateToLobby()
   }
 
   return (
     <GameContext.Provider
-      value={{ state, connected, error, send, onLeave: handleLeave, gameId, playerName }}
+      value={{ state, connected, error, send, onLeave: handleLeaveGame, gameId, playerName }}
     >
       <div className="bg-pirate" />
       <GameUIProvider>

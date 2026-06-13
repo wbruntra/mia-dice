@@ -5,7 +5,7 @@ import {
 import type { GameState, StoredMove } from '../game/types'
 import { rollDice, diceRank } from '../game/types'
 import { insertMove, reconstructState } from '../db/game-store'
-import { broadcast } from './connections'
+import { broadcast, clearPendingAbandonOnStart } from './connections'
 
 export type Move =
   | { type: 'claim'; value: number }
@@ -15,6 +15,9 @@ export type Move =
   | { type: 'roll_raise'; value: number }
   | { type: 'challenge' }
   | { type: 'give_up' }
+  | { type: 'surrender' }
+  | { type: 'rematch_offer' }
+  | { type: 'rematch_accept' }
   | { type: 'challenge_ack' }
   | { type: 'round_end_ack' }
 
@@ -156,6 +159,7 @@ function scheduleRoundEndAutoAdvance(gameId: string) {
 }
 
 export async function startGame(gameId: string, dice: [number, number], cpuPlayer?: number) {
+  clearPendingAbandonOnStart(gameId)
   await insertMove(gameId, 'game_start', null, { dice, ...(cpuPlayer !== undefined ? { cpuPlayer } : {}) })
   const state = await reconstructState(gameId)
   if (!state) throw new Error('Failed to reconstruct state after game_start')
@@ -184,6 +188,14 @@ function buildStoredMove(
       return { stored: { type: 'challenge', player } }
     case 'give_up':
       return { stored: { type: 'give_up', player } }
+    case 'surrender':
+      return { stored: { type: 'surrender', player } }
+    case 'rematch_offer':
+      return { stored: { type: 'rematch_offer', player } }
+    case 'rematch_accept': {
+      const dice = rollDice()
+      return { stored: { type: 'rematch_accept', player, data: { dice } } }
+    }
     case 'challenge_ack':
       return { stored: { type: 'challenge_ack', player } }
     case 'round_end_ack': {
@@ -216,6 +228,11 @@ export async function handleMove(
   await insertMove(gameId, stored.type, stored.player !== undefined ? stored.player : null, stored.data)
 
   broadcast(validation.state)
+
+  if (validation.state.status === 'finished') {
+    clearChallengeTimer(gameId)
+    clearRoundEndTimer(gameId)
+  }
 
   if (validation.state.roundPhase === 'challenge_result') {
     scheduleChallengeAutoAdvance(gameId)

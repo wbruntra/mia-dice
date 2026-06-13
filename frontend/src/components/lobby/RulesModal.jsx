@@ -20,6 +20,19 @@ export default function RulesModal({ onClose }) {
         </p>
 
         <section className="mb-5">
+          <h3 className="text-pirate-gold font-semibold mb-2">The Game</h3>
+          <p className="text-sm text-pirate-parchment/80 leading-relaxed">
+            Mia is played with two players and a single pair of dice. In each round, players take
+            turns rolling the dice and claiming what they got — but you can bluff. You only see
+            your own roll, not what the other player rolled, so when your opponent claims a high
+            number, you have to decide: do you believe them, or call their bluff? The claim must
+            always be higher than the last one, pushing the stakes up until someone challenges.
+            If you're caught bluffing, you lose a life. If you challenge and you're wrong,
+            <em>you</em> lose a life. The last player standing wins.
+          </p>
+        </section>
+
+        <section className="mb-5">
           <h3 className="text-pirate-gold font-semibold mb-2">Objective</h3>
           <p className="text-sm text-pirate-parchment/80 leading-relaxed">
             Be the last player standing. Each player starts with{' '}
@@ -43,26 +56,24 @@ export default function RulesModal({ onClose }) {
         <section className="mb-5">
           <h3 className="text-pirate-gold font-semibold mb-2">Receiving the Cup</h3>
           <p className="text-sm text-pirate-parchment/80 mb-2 leading-relaxed">
-            When it's your turn to receive, you have three choices:
+            When it's your turn to receive, you have four choices:
           </p>
           <ul className="text-sm text-pirate-parchment/80 space-y-2 leading-relaxed">
             <li>
-              <strong className="text-pirate-parchment">Believe & Roll</strong> — Accept the claim,
-              re-roll, look at your dice, and announce a higher claim.
+              <strong className="text-pirate-parchment">Raise</strong> — Claim a higher number without rolling. You're bluffing or betting on your current dice.
             </li>
             <li>
-              <strong className="text-pirate-parchment">Challenge</strong> — Reveal the dice. If
-              the actual value is lower than the claim, the claimer loses a life. If it's equal or
-              higher, you lose a life.
+              <strong className="text-pirate-parchment">Re-Roll & Raise</strong> — Roll the dice, look at the result, and announce a higher claim.
             </li>
             <li>
-              <strong className="text-pirate-parchment">Pass</strong> — Pass the cup without
-              looking, keeping the same claim. You take responsibility for it.
+              <strong className="text-pirate-parchment">Challenge</strong> — Reveal the dice. If the actual value is lower than the claim, the claimer loses a life. If it's equal or higher, you lose a life.
+            </li>
+            <li>
+              <strong className="text-pirate-parchment">Pass</strong> — Pass the cup without looking, keeping the same claim. You take responsibility for it.
             </li>
           </ul>
           <p className="text-sm text-pirate-parchment/60 mt-2 leading-relaxed">
-            If the dice return to the original roller (full circle), they <em>must</em> challenge
-            or raise — no more passing.
+            If the dice return to the original roller (full circle), they <em>must</em> challenge or raise — no more passing.
           </p>
         </section>
 

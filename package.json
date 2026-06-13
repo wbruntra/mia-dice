@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run backend & sleep 1 && bun run frontend",
+    "dev": "bun run --parallel backend frontend",
     "frontend": "cd frontend && bun run dev",
     "backend": "bun --watch bin/server.ts",
     "db:generate": "drizzle-kit generate",

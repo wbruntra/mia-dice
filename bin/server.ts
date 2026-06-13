@@ -1,6 +1,7 @@
 import app from '../index'
-import { wsOpen, wsMessage, wsClose, type WsData } from '~/src/routes/ws'
+import { wsOpen, wsMessage, wsClose, wsPong, type WsData } from '~/src/routes/ws'
 import { cleanupOldGames } from '~/src/services/cleanup'
+import { startHeartbeat } from '~/src/services/connections'
 
 const port = process.env.PORT || 9001
 
@@ -19,8 +20,11 @@ const server = Bun.serve<WsData>({
     open: wsOpen,
     message: wsMessage,
     close: wsClose,
+    pong: wsPong,
   },
 })
+
+startHeartbeat()
 
 // Auto-cleanup old pending games every 5 minutes
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000

@@ -40,6 +40,7 @@ export default function GameView() {
   const [justRolled, setJustRolled] = useState(false)
   const [rolling, setRolling] = useState(false)
   const [animDice, setAnimDice] = useState(null)
+  const [showSurrenderConfirm, setShowSurrenderConfirm] = useState(false)
   const rollTimerRef = useRef(null)
   const rollIntervalRef = useRef(null)
 
@@ -116,6 +117,11 @@ export default function GameView() {
     setShowClaimPicker(false)
     setPendingAction(null)
     setPendingValue(null)
+  }
+
+  function handleSurrender() {
+    send({ type: 'surrender' })
+    setShowSurrenderConfirm(false)
   }
 
   function handleClaimValue(value) {
@@ -205,12 +211,21 @@ export default function GameView() {
 
       {/* Header */}
       <header className="flex items-center justify-between relative z-10">
-        <button
-          onClick={onLeave}
-          className="text-pirate-parchment/40 text-sm hover:text-pirate-parchment/70 transition-colors"
-        >
-          Leave
-        </button>
+        {state.status === 'playing' ? (
+          <button
+            onClick={() => setShowSurrenderConfirm(true)}
+            className="text-pirate-crimson text-sm hover:text-red-400 transition-colors"
+          >
+            Surrender
+          </button>
+        ) : (
+          <button
+            onClick={onLeave}
+            className="text-pirate-parchment/40 text-sm hover:text-pirate-parchment/70 transition-colors"
+          >
+            Leave
+          </button>
+        )}
         <span className="font-pirate text-pirate-gold text-base">Round {state.roundNumber}</span>
         <span className="text-pirate-parchment/30 text-sm">
           {state.status === 'waiting' && 'Waiting for opponent...'}
@@ -340,6 +355,10 @@ export default function GameView() {
         <GameOverOverlay
           winner={state.winner}
           playerStates={state.playerStates}
+          rematchOfferedBy={state.rematchOfferedBy}
+          player={state.player}
+          cpuPlayer={state.cpuPlayer}
+          send={send}
           onLeave={onLeave}
         />
       )}
@@ -354,6 +373,31 @@ export default function GameView() {
             setPendingAction(null)
           }}
         />
+      )}
+
+      {showSurrenderConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-pirate-wood-light border border-pirate-crimson/40 rounded-2xl p-6 max-w-sm w-full text-center">
+            <p className="font-pirate text-3xl text-pirate-crimson mb-4">🏳️ Surrender?</p>
+            <p className="text-pirate-parchment/60 text-sm mb-6">
+              You will lose all your lives and the game will end.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowSurrenderConfirm(false)}
+                className="flex-1 btn-parchment"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSurrender}
+                className="flex-1 btn-crimson"
+              >
+                Surrender
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -500,10 +544,22 @@ function RoundEndOverlay({ result, playerStates, onAck }) {
   )
 }
 
-function GameOverOverlay({ winner, playerStates, onLeave }) {
+function GameOverOverlay({ winner, playerStates, rematchOfferedBy, player, cpuPlayer, send, onLeave }) {
   const me = playerStates.find((p) => p.isMe)
   const opponent = playerStates.find((p) => !p.isMe)
   const iWon = winner === me.name
+  const hasOffered = rematchOfferedBy === player
+  const opponentOffered = rematchOfferedBy !== null && rematchOfferedBy !== player
+  const isVsCpu = cpuPlayer !== null
+
+  function handleOfferRematch() {
+    send({ type: 'rematch_offer' })
+  }
+
+  function handleAcceptRematch() {
+    send({ type: 'rematch_accept' })
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
       <div className="bg-pirate-wood-light border border-pirate-gold rounded-2xl p-8 max-w-sm w-full text-center">
@@ -511,12 +567,28 @@ function GameOverOverlay({ winner, playerStates, onLeave }) {
         <p className="font-pirate text-3xl text-pirate-gold mb-2">
           {iWon ? 'You Win!' : `${opponent.name} Wins!`}
         </p>
-        <p className="text-pirate-parchment/50 text-sm mb-4">
+        <p className="text-pirate-parchment/50 text-sm mb-6">
           {iWon ? 'The seas are yours, captain!' : 'Walk the plank...'}
         </p>
-        <button onClick={onLeave} className="btn-gold">
-          Back to Lobby
-        </button>
+
+        <div className="flex flex-col gap-3">
+          {!isVsCpu && rematchOfferedBy === null && (
+            <button onClick={handleOfferRematch} className="btn-gold">
+              Offer Rematch
+            </button>
+          )}
+          {!isVsCpu && hasOffered && (
+            <p className="text-pirate-parchment/60 text-sm">Waiting for {opponent.name} to accept...</p>
+          )}
+          {!isVsCpu && opponentOffered && (
+            <button onClick={handleAcceptRematch} className="btn-ocean">
+              Accept Rematch
+            </button>
+          )}
+          <button onClick={onLeave} className="btn-parchment">
+            Back to Lobby
+          </button>
+        </div>
       </div>
     </div>
   )

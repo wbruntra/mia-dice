@@ -4,6 +4,7 @@ import { loadGame, reconstructState, listPendingGames, saveGameMetadata } from '
 import {
   registerConnection, unregisterConnection, broadcast,
   registerLobbyConnection, unregisterLobbyConnection, broadcastLobbyUpdate,
+  recordPong, schedulePendingAbandon, cancelPendingAbandon,
 } from '../services/connections'
 import { handleMove } from '../services/game'
 import type { Move } from '../services/game'
@@ -77,17 +78,21 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
   }
 }
 
+export function wsPong(ws: ServerWebSocket<WsData>) {
+  recordPong(ws)
+}
+
 export async function wsClose(ws: ServerWebSocket<WsData>) {
   unregisterLobbyConnection(ws)
   const { gameId, player } = ws.data
   if (!gameId || player === null) return
   unregisterConnection(gameId, player)
-  // If the game creator disconnects while no one has joined yet, abandon the game
+  // If the game creator disconnects while the game is still pending,
+  // schedule abandonment after a grace period so accidental reloads can recover.
   if (player === 0) {
     const metadata = await loadGame(gameId)
     if (metadata && metadata.status === 'pending') {
-      await saveGameMetadata(gameId, { status: 'abandoned' })
-      await broadcastLobbyUpdate()
+      schedulePendingAbandon(gameId)
     }
   }
 }

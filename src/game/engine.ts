@@ -21,6 +21,8 @@ export function blankState(id: string, players: string[], startingLives: number)
     roundEndAcks: [],
     lastAction: null,
     cpuPlayer: null,
+    lastStartingPlayer: 0,
+    rematchOfferedBy: null,
   }
 }
 
@@ -37,6 +39,8 @@ export function newGame(dice: [number, number]): Partial<GameState> {
     challengeResult: null,
     challengeAcks: [],
     roundEndAcks: [],
+    lastStartingPlayer: 0,
+    rematchOfferedBy: null,
   }
 }
 
@@ -53,6 +57,7 @@ export function newRound(state: GameState, startingPlayer: number, dice: [number
     challengeResult: null,
     challengeAcks: [],
     roundEndAcks: [],
+    rematchOfferedBy: null,
   }
 }
 
@@ -278,6 +283,67 @@ export function giveUp(
   return { state: nextState, result }
 }
 
+export function surrender(state: GameState, player: number): { state: GameState; error?: string } {
+  if (state.status === 'finished') return { state, error: 'Game already finished' }
+
+  const nextState = { ...state, lives: [...state.lives] }
+  nextState.lives[player] = 0
+  nextState.winner = nextState.players[1 - player]
+  nextState.status = 'finished'
+  nextState.roundPhase = 'game_over'
+
+  return { state: nextState }
+}
+
+export function rematchOffer(
+  state: GameState,
+  player: number,
+): { state: GameState; error?: string } {
+  if (state.status !== 'finished') return { state, error: 'Game is not finished' }
+  if (state.rematchOfferedBy !== null) return { state, error: 'Rematch already offered' }
+
+  return {
+    state: {
+      ...state,
+      rematchOfferedBy: player,
+      lastAction: `${state.players[player]} wants a rematch`,
+    },
+  }
+}
+
+export function rematchAccept(
+  state: GameState,
+  player: number,
+  dice: [number, number],
+): { state: GameState; error?: string } {
+  if (state.status !== 'finished') return { state, error: 'Game is not finished' }
+  if (state.rematchOfferedBy === null) return { state, error: 'No rematch offer to accept' }
+  if (state.rematchOfferedBy === player) return { state, error: 'Cannot accept your own offer' }
+
+  const startingPlayer = 1 - state.lastStartingPlayer
+  return {
+    state: {
+      ...state,
+      status: 'playing',
+      roundPhase: 'claim',
+      roundNumber: 1,
+      dice,
+      lastRoller: startingPlayer,
+      currentClaim: null,
+      originalCaller: startingPlayer,
+      turnPlayer: startingPlayer,
+      lives: new Array(state.players.length).fill(state.startingLives),
+      winner: null,
+      challengeResult: null,
+      challengeAcks: [],
+      roundEndAcks: [],
+      lastStartingPlayer: startingPlayer,
+      rematchOfferedBy: null,
+      lastAction: 'Rematch accepted — new game started',
+    },
+  }
+}
+
 export function finishChallenge(state: GameState): GameState {
   if (state.status === 'finished') {
     return { ...state, roundPhase: 'game_over' }
@@ -344,6 +410,7 @@ export function stateForPlayer(state: GameState, player: number) {
     player,
     cpuPlayer: state.cpuPlayer,
     lastAction: state.lastAction,
+    rematchOfferedBy: state.rematchOfferedBy,
   }
 }
 
@@ -368,7 +435,7 @@ export function applyMove(
       if (value === undefined) return { state, error: 'claim missing value' }
       const r = makeClaim(state, player, value)
       if (r.error) return r
-      return { state: { ...r.state, lastAction: `${state.players[player]} claimed ${rankDisplay(value)}` } }
+      return { state: { ...r.state, lastAction: `${state.players[player]} rolled, then bid ${rankDisplay(value)}` } }
     }
 
     case 'roll': {
@@ -377,7 +444,7 @@ export function applyMove(
       if (!dice) return { state, error: 'roll missing dice' }
       const r = rollDiceAction(state, player, dice)
       if (r.error) return r
-      return { state: { ...r.state, lastAction: `${state.players[player]} rolled the dice` } }
+      return { state: r.state }
     }
 
     case 'pass': {
@@ -393,7 +460,11 @@ export function applyMove(
       if (value === undefined) return { state, error: 'raise missing value' }
       const r = raise(state, player, value)
       if (r.error) return r
-      return { state: { ...r.state, lastAction: `${state.players[player]} raised to ${rankDisplay(value)}` } }
+      const justRolled = state.lastRoller === player
+      const message = justRolled
+        ? `${state.players[player]} rolled, then bid ${rankDisplay(value)}`
+        : `${state.players[player]} raised to ${rankDisplay(value)}`
+      return { state: { ...r.state, lastAction: message } }
     }
 
     case 'roll_raise': {
@@ -403,7 +474,7 @@ export function applyMove(
       if (!dice) return { state, error: 'roll_raise missing dice' }
       const r = rollAndRaise(state, player, value, dice)
       if (r.error) return r
-      return { state: { ...r.state, lastAction: `${state.players[player]} rolled and raised to ${rankDisplay(value)}` } }
+      return { state: { ...r.state, lastAction: `${state.players[player]} rolled, then bid ${rankDisplay(value)}` } }
     }
 
     case 'challenge': {
@@ -418,6 +489,34 @@ export function applyMove(
       const result = giveUp(state, player)
       if ('error' in result) return result
       return { state: { ...result.state, lastAction: `${state.players[player]} gave up against Mia` } }
+    }
+
+    case 'surrender': {
+      if (player === undefined) return { state, error: 'Missing player for surrender' }
+      const result = surrender(state, player)
+      if (result.error) return result
+      return {
+        state: {
+          ...result.state,
+          lastAction: `${state.players[player]} surrendered`,
+        },
+      }
+    }
+
+    case 'rematch_offer': {
+      if (player === undefined) return { state, error: 'Missing player for rematch_offer' }
+      const result = rematchOffer(state, player)
+      if (result.error) return result
+      return { state: result.state }
+    }
+
+    case 'rematch_accept': {
+      if (player === undefined) return { state, error: 'Missing player for rematch_accept' }
+      const { dice } = (move.data || {}) as { dice?: [number, number] }
+      if (!dice) return { state, error: 'rematch_accept missing dice' }
+      const result = rematchAccept(state, player, dice)
+      if (result.error) return result
+      return { state: result.state }
     }
 
     case 'challenge_ack': {

@@ -27,6 +27,8 @@ export interface GameState {
 
   lastAction: string | null
   cpuPlayer: number | null
+  lastStartingPlayer: number
+  rematchOfferedBy: number | null
 }
 
 export interface ChallengeResult {

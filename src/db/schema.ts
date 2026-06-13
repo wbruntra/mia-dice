@@ -16,8 +16,9 @@ export const gameMoves = sqliteTable('game_moves', {
   type: text('type', {
     enum: [
       'game_start', 'claim', 'roll', 'pass', 'raise',
-      'roll_raise', 'challenge', 'give_up',
+      'roll_raise', 'challenge', 'give_up', 'surrender',
       'challenge_ack', 'round_end_ack',
+      'rematch_offer', 'rematch_accept',
     ],
   }).notNull(),
   player: integer('player'),
