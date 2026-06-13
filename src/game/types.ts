@@ -1,9 +1,5 @@
 export type GameStatus = 'waiting' | 'playing' | 'finished'
-export type RoundPhase =
-  | 'claim'
-  | 'challenge_result'
-  | 'round_end'
-  | 'game_over'
+export type RoundPhase = 'claim' | 'challenge_result' | 'round_end' | 'game_over'
 
 export interface GameState {
   id: string
@@ -75,8 +71,27 @@ const RANK_TABLE: Map<string, number> = new Map([
 
 // Human-readable labels for each rank
 const RANK_LABELS: string[] = [
-  '31', '32', '41', '42', '43', '51', '52', '53', '54',
-  '61', '62', '63', '64', '65', '66', '55', '44', '33', '22', '11', '21',
+  '31',
+  '32',
+  '41',
+  '42',
+  '43',
+  '51',
+  '52',
+  '53',
+  '54',
+  '61',
+  '62',
+  '63',
+  '64',
+  '65',
+  '66',
+  '55',
+  '44',
+  '33',
+  '22',
+  '11',
+  '21',
 ]
 
 export function rankKey(dice: [number, number]): string {

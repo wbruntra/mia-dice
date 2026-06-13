@@ -15,15 +15,18 @@ beliefs about the opponent's tendencies, not just the dice.
 ## Information Model
 
 **Public state (both players know):**
+
 - Current claimed rank
 - Lives remaining for each player
 - Whether the claim has been passed, and how many times
 - Round history within the game
 
 **Private state (only the roller knows):**
+
 - Actual dice value under the cup
 
 **Latent / inferred:**
+
 - Opponent's bluffing frequency at each rank
 - Opponent's challenge threshold
 - Whether the opponent tracks your own bluffing patterns
@@ -61,6 +64,7 @@ lives lost/won). Agents learn mixed strategies emergently. Challenges: the game 
 few rounds), so reward signal is sparse and REINFORCE variance is high.
 
 **Policy inputs:**
+
 - Current claim rank (normalized)
 - Own lives remaining
 - Opponent lives remaining
@@ -98,12 +102,12 @@ This can sit on top of either a self-play RL policy or a CFR baseline.
 
 ## Key Design Decisions
 
-| Decision | Tradeoff |
-|---|---|
-| Reward per life vs per game | Per-life gives denser signal; per-game matches actual objective |
-| Game-level vs round-level optimization | Round rewards can misalign (winning rounds ≠ winning game) |
-| Memory depth for opponent modeling | More history = better exploitation, more variance from noise |
-| Discrete vs continuous action space | Discrete (honest/bluff1/bluff2/bluff3) is tractable; continuous needs more data |
+| Decision                               | Tradeoff                                                                        |
+| -------------------------------------- | ------------------------------------------------------------------------------- |
+| Reward per life vs per game            | Per-life gives denser signal; per-game matches actual objective                 |
+| Game-level vs round-level optimization | Round rewards can misalign (winning rounds ≠ winning game)                      |
+| Memory depth for opponent modeling     | More history = better exploitation, more variance from noise                    |
+| Discrete vs continuous action space    | Discrete (honest/bluff1/bluff2/bluff3) is tractable; continuous needs more data |
 
 ## Practical Path
 

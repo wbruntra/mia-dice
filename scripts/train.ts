@@ -13,13 +13,12 @@ async function bench(agent: TabularAgent, label: string) {
   let wins = 0
   for (let i = 0; i < BENCH_GAMES; i++) {
     // Alternate sides to avoid seat bias
-    const record = i % 2 === 0
-      ? simulateGame(agent, rule, LIVES)
-      : simulateGame(rule, agent, LIVES)
+    const record =
+      i % 2 === 0 ? simulateGame(agent, rule, LIVES) : simulateGame(rule, agent, LIVES)
     const agentSide = i % 2 === 0 ? 0 : 1
     if (record.winner === agentSide) wins++
   }
-  const pct = (wins / BENCH_GAMES * 100).toFixed(1)
+  const pct = ((wins / BENCH_GAMES) * 100).toFixed(1)
   console.log(`  ${label} vs rule-based: ${pct}% (${BENCH_GAMES.toLocaleString()} games)`)
 }
 
@@ -44,12 +43,12 @@ async function main() {
 
     if ((i + 1) % REPORT_EVERY === 0) {
       const windowTotal = windowWins[0] + windowWins[1]
-      const wr0 = (windowWins[0] / windowTotal * 100).toFixed(1)
-      const wr1 = (windowWins[1] / windowTotal * 100).toFixed(1)
+      const wr0 = ((windowWins[0] / windowTotal) * 100).toFixed(1)
+      const wr1 = ((windowWins[1] / windowTotal) * 100).toFixed(1)
       const avgRounds = (totalRounds / (i + 1)).toFixed(1)
       console.log(
         `[${String(i + 1).padStart(6)}]  A0 ${wr0}%  A1 ${wr1}%  ` +
-        `avg rounds ${avgRounds}  info-sets ${agent0.infoSetCount}`
+          `avg rounds ${avgRounds}  info-sets ${agent0.infoSetCount}`,
       )
       windowWins = [0, 0]
     }

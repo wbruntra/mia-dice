@@ -17,11 +17,7 @@ const HEARTBEAT_TIMEOUT_MS = 60000
 const pendingAbandonTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const PENDING_ABANDON_GRACE_MS = 30000
 
-export function registerConnection(
-  gameId: string,
-  player: PlayerLabel,
-  ws: ServerWebSocket<any>,
-) {
+export function registerConnection(gameId: string, player: PlayerLabel, ws: ServerWebSocket<any>) {
   if (!connections.has(gameId)) connections.set(gameId, new Map())
   connections.get(gameId)!.set(player, ws)
   lastPongAt.set(ws, Date.now())

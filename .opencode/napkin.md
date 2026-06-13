@@ -2,12 +2,12 @@
 
 ## Corrections
 
-| Date       | Source | What Went Wrong                                                                      | What To Do Instead                                                                                  |
-| ---------- | ------ | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| 2026-05-06 | self   | Built Mexico with per-player dice initially — only 2 shared dice in the whole game   | Single `dice` field on GameState, passed back and forth between players                            |
-| 2026-05-06 | rules  | Ranking: 11 beats 66 (doubles go 11>22>33>44>55>66, all above singles)              | Use rank-based comparison (0-20) with `RANK_TABLE` Map lookup, not simple numeric computation       |
-| 2026-05-06 | rules  | Mia (21) doubles life loss, initial player can claim lower value                     | `isMiaRank()` check in `resolveChallenge`; `makeClaim` allows any value regardless of actual dice    |
-| 2026-05-06 | user   | Wanted PvP only, no CPU player                                                       | Stripped all CPU player code, simplified to 2-player WebSocket                                      |
+| Date       | Source | What Went Wrong                                                                    | What To Do Instead                                                                                |
+| ---------- | ------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 2026-05-06 | self   | Built Mexico with per-player dice initially — only 2 shared dice in the whole game | Single `dice` field on GameState, passed back and forth between players                           |
+| 2026-05-06 | rules  | Ranking: 11 beats 66 (doubles go 11>22>33>44>55>66, all above singles)             | Use rank-based comparison (0-20) with `RANK_TABLE` Map lookup, not simple numeric computation     |
+| 2026-05-06 | rules  | Mia (21) doubles life loss, initial player can claim lower value                   | `isMiaRank()` check in `resolveChallenge`; `makeClaim` allows any value regardless of actual dice |
+| 2026-05-06 | user   | Wanted PvP only, no CPU player                                                     | Stripped all CPU player code, simplified to 2-player WebSocket                                    |
 
 ## Patterns That Work
 
@@ -17,6 +17,7 @@
 - Auto-advance timers for challenge_result and round_end phases handle disconnected players
 
 ---
+
 | 2026-05-06 | self | AI challenged rank 0 (31) because `claim.value <= 7` bucket had 25% challenge rate | Rank 0 (31) is the minimum possible roll — can't be a bluff about being too high, so challengeProb should be 0. Fixed with tiered challengeProb: 0/0.05/0.15/scale in both `getAIMove()` and `RuleAgent` |
 
 ## Domain Notes

@@ -20,9 +20,7 @@ export default function PendingGamesList({ currentName, onJoinGame }) {
 
   return (
     <div className="mt-8 w-full">
-      <p className="text-pirate-parchment/50 text-xs uppercase tracking-wider mb-3">
-        Open Games
-      </p>
+      <p className="text-pirate-parchment/50 text-xs uppercase tracking-wider mb-3">Open Games</p>
       <div className="flex flex-col gap-2">
         {visible.map((game) => (
           <div
@@ -35,10 +33,7 @@ export default function PendingGamesList({ currentName, onJoinGame }) {
                 {formatRelativeTime(game.createdAt)}
               </span>
             </div>
-            <button
-              onClick={() => onJoinGame(game.id)}
-              className="btn-gold text-sm px-4 py-1.5"
-            >
+            <button onClick={() => onJoinGame(game.id)} className="btn-gold text-sm px-4 py-1.5">
               Join
             </button>
           </div>

@@ -44,12 +44,12 @@ of 1.
 
 The updated logic:
 
-| Situation | Decision |
-|---|---|
-| My lives = 1 | Always challenge — giving up is guaranteed death, challenging at least has upside |
-| Opponent lives = 1 | 70% challenge — a correct challenge ends the game |
-| Opponent lives ≤ 2 | 50% challenge — elevated stakes |
-| Comfortable (both 3+) | 25% challenge — minimize risk of the 2-life penalty |
+| Situation             | Decision                                                                          |
+| --------------------- | --------------------------------------------------------------------------------- |
+| My lives = 1          | Always challenge — giving up is guaranteed death, challenging at least has upside |
+| Opponent lives = 1    | 70% challenge — a correct challenge ends the game                                 |
+| Opponent lives ≤ 2    | 50% challenge — elevated stakes                                                   |
+| Comfortable (both 3+) | 25% challenge — minimize risk of the 2-life penalty                               |
 
 ### Bug Fix: Pass as Original Caller
 
@@ -135,7 +135,7 @@ calibrate their challenge rates accordingly.
 ### Strategy Is Opponent-Dependent
 
 Applying the trained agent's strategies to the rule agent and benchmarking against the trained
-agent showed a *decrease* in win rate (from 28% to 24.8%). The trained agent had calibrated
+agent showed a _decrease_ in win rate (from 28% to 24.8%). The trained agent had calibrated
 to exploit the original rule agent's tendencies. Making the rule agent behave more like the
 trained agent made it more legible to that opponent.
 
@@ -191,17 +191,17 @@ exploited by an agent that does use it.
 
 ## Files Changed
 
-| File | Change |
-|---|---|
-| `src/services/game.ts` | `getAIMove`: pass guard, life-aware Mia, dice-aware respond_orig, better doubles/challenge probabilities |
-| `src/ai/agent.ts` | New — Agent interface |
-| `src/ai/simulator.ts` | New — synchronous game simulator |
-| `src/ai/rule-agent.ts` | New — heuristic agent for benchmarking |
-| `src/ai/tabular-agent.ts` | New — tabular policy gradient agent |
-| `src/ai/policy.json` | New — saved policy from 50k self-play games |
-| `scripts/train.ts` | New — self-play training loop |
-| `docs/ai-training.md` | New — planning document for AI training approaches |
-| `docs/ai-development.md` | New — this document |
+| File                      | Change                                                                                                   |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `src/services/game.ts`    | `getAIMove`: pass guard, life-aware Mia, dice-aware respond_orig, better doubles/challenge probabilities |
+| `src/ai/agent.ts`         | New — Agent interface                                                                                    |
+| `src/ai/simulator.ts`     | New — synchronous game simulator                                                                         |
+| `src/ai/rule-agent.ts`    | New — heuristic agent for benchmarking                                                                   |
+| `src/ai/tabular-agent.ts` | New — tabular policy gradient agent                                                                      |
+| `src/ai/policy.json`      | New — saved policy from 50k self-play games                                                              |
+| `scripts/train.ts`        | New — self-play training loop                                                                            |
+| `docs/ai-training.md`     | New — planning document for AI training approaches                                                       |
+| `docs/ai-development.md`  | New — this document                                                                                      |
 
 ---
 

@@ -5,20 +5,33 @@ export const games = sqliteTable('games', {
   players: text('players').notNull().default('[]'),
   startingLives: integer('starting_lives').notNull().default(5),
   winner: text('winner'),
-  status: text('status', { enum: ['pending', 'active', 'finished', 'abandoned'] }).notNull().default('pending'),
+  status: text('status', { enum: ['pending', 'active', 'finished', 'abandoned'] })
+    .notNull()
+    .default('pending'),
   createdAt: text('created_at').notNull(),
 })
 
 export const gameMoves = sqliteTable('game_moves', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  gameId: text('game_id').notNull().references(() => games.id),
+  gameId: text('game_id')
+    .notNull()
+    .references(() => games.id),
   seq: integer('seq').notNull(),
   type: text('type', {
     enum: [
-      'game_start', 'claim', 'roll', 'pass', 'raise',
-      'roll_raise', 'challenge', 'give_up', 'surrender',
-      'challenge_ack', 'round_end_ack',
-      'rematch_offer', 'rematch_accept',
+      'game_start',
+      'claim',
+      'roll',
+      'pass',
+      'raise',
+      'roll_raise',
+      'challenge',
+      'give_up',
+      'surrender',
+      'challenge_ack',
+      'round_end_ack',
+      'rematch_offer',
+      'rematch_accept',
     ],
   }).notNull(),
   player: integer('player'),

@@ -24,32 +24,35 @@ Mia (also known as Mexico) is a classic bluffing game played with two dice and a
 
 ### Ranking (best to worst)
 
-| Rank | Roll |     | Rank | Roll |
-|------|------|-----|------|------|
-| 20   | 2-1 (Mia) | | 9    | 6-1  |
-| 19   | 1-1  |     | 8    | 5-4  |
-| 18   | 2-2  |     | 7    | 5-3  |
-| 17   | 3-3  |     | 6    | 5-2  |
-| 16   | 4-4  |     | 5    | 5-1  |
-| 15   | 5-5  |     | 4    | 4-3  |
-| 14   | 6-6  |     | 3    | 4-2  |
-| 13   | 6-5  |     | 2    | 4-1  |
-| 12   | 6-4  |     | 1    | 3-2  |
-| 11   | 6-3  |     | 0    | 3-1  |
-| 10   | 6-2  |     |      |      |
+| Rank | Roll      |     | Rank | Roll |
+| ---- | --------- | --- | ---- | ---- |
+| 20   | 2-1 (Mia) |     | 9    | 6-1  |
+| 19   | 1-1       |     | 8    | 5-4  |
+| 18   | 2-2       |     | 7    | 5-3  |
+| 17   | 3-3       |     | 6    | 5-2  |
+| 16   | 4-4       |     | 5    | 5-1  |
+| 15   | 5-5       |     | 4    | 4-3  |
+| 14   | 6-6       |     | 3    | 4-2  |
+| 13   | 6-5       |     | 2    | 4-1  |
+| 12   | 6-4       |     | 1    | 3-2  |
+| 11   | 6-3       |     | 0    | 3-1  |
+| 10   | 6-2       |     |      |      |
 
 Higher rank beats lower rank. Doubles beat singles except 65.
 
-### How to Play
+### How to Play (Rules of the Sea)
 
-1. **Player 1** rolls the dice, looks, and announces a claim (they can bluff higher or lower than what they actually rolled)
-2. The dice are passed to the next player, who can:
-   - **Believe & Roll** — re-roll, look, then claim a higher value
-   - **Challenge** — call the bluff. If the actual dice are lower than the claim, the claimer loses a life. Otherwise the challenger loses
-   - **Pass** — accept responsibility for the current claim without looking, passing the turn back
-3. When the dice return to the player who made the original claim (*full circle*), they **must** either challenge or raise
-4. A roll or claim of **Mia (2-1)** causes the loser to lose **2 lives** instead of 1
-5. Each player starts with **3 lives**. Last one standing wins
+_The wind howls through the rigging of a storm-battered brigantine. In the dim, lantern-lit cabin, two weathered sailors face each other across a scarred oak table. Between them lies a single leather cup and two ivory dice. A bottle of grog sits nearby, but the real stake is survival._
+
+1. **Roll in Secret**: A sailor rolls the dice under the heavy wooden cup, peeks at the result, and declares a claim (bluffing is highly encouraged!).
+2. **Passing the Cup**: The cup is slid to the next sailor, who must decide:
+   - **Raise**: Declare a higher claim without looking, betting their life on what's already under the cup.
+   - **Re-Roll & Raise**: Shake the cup, roll the dice anew, peek, and announce a higher claim.
+   - **Challenge**: Call the previous sailor a scoundrel and lift the cup. If the actual dice are lower than their claim, they lose a life. If they told the truth (or rolled higher), the challenger loses a life.
+   - **Pass**: Pass the cup without looking, accepting the current claim as their own burden.
+3. **Full Circle**: If the cup returns to the original caller, they _must_ raise or challenge.
+4. **Mia (2-1)**: A claim or roll of the legendary **Mia** (2 and 1) ends the passing immediately. The defender must surrender (lose 1 life) or look (lose 2 lives if it's really Mia, or the claimer loses 1 life if they lied).
+5. **Survival**: Each player starts with **5 lives**. The last sailor standing wins the voyage.
 
 ## Project Structure
 
@@ -84,14 +87,14 @@ scripts/
 
 ### Tech Stack
 
-| Layer | Tech |
-|-------|------|
-| Runtime | [Bun](https://bun.sh) |
-| HTTP | [Hono](https://hono.dev) |
-| WebSocket | Native `Bun.serve()` |
-| Database | SQLite (`mexico.db`) via [Drizzle ORM](https://orm.drizzle.team) |
-| Frontend | React 19, Vite 8, Tailwind CSS v4 |
-| Animations | [Motion](https://motion.dev) (Framer Motion successor) |
+| Layer      | Tech                                                             |
+| ---------- | ---------------------------------------------------------------- |
+| Runtime    | [Bun](https://bun.sh)                                            |
+| HTTP       | [Hono](https://hono.dev)                                         |
+| WebSocket  | Native `Bun.serve()`                                             |
+| Database   | SQLite (`mexico.db`) via [Drizzle ORM](https://orm.drizzle.team) |
+| Frontend   | React 19, Vite 8, Tailwind CSS v4                                |
+| Animations | [Motion](https://motion.dev) (Framer Motion successor)           |
 
 ## Database Migrations
 
@@ -114,11 +117,11 @@ bun run db:migrate   # apply pending migrations
 
 ### HTTP Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/games` | Create a new game. Returns `{ gameId, playerId }` |
-| `POST` | `/api/games/:id/join` | Join an existing game. Returns `{ gameId, playerId }` |
-| `GET` | `/api/games/:id?player=<playerId>` | Get game state for a specific player |
+| Method | Path                               | Description                                           |
+| ------ | ---------------------------------- | ----------------------------------------------------- |
+| `POST` | `/api/games`                       | Create a new game. Returns `{ gameId, playerId }`     |
+| `POST` | `/api/games/:id/join`              | Join an existing game. Returns `{ gameId, playerId }` |
+| `GET`  | `/api/games/:id?player=<playerId>` | Get game state for a specific player                  |
 
 ### WebSocket (`/ws`)
 
@@ -130,16 +133,16 @@ Connect via WebSocket and send JSON messages:
 
 **Actions** (sent once joined):
 
-| Type | Payload | Description |
-|------|---------|-------------|
-| `claim` | `{ value: number }` | Make initial claim (0-20) |
-| `roll` | — | Believe & roll (re-roll dice) |
-| `raise` | `{ value: number }` | Claim higher without re-rolling |
-| `roll_raise` | `{ value: number }` | Re-roll and claim higher |
-| `pass` | — | Pass dice to next player |
-| `challenge` | — | Challenge the current claim |
-| `challenge_ack` | — | Acknowledge challenge result |
-| `round_end_ack` | — | Acknowledge round end |
+| Type            | Payload             | Description                     |
+| --------------- | ------------------- | ------------------------------- |
+| `claim`         | `{ value: number }` | Make initial claim (0-20)       |
+| `roll`          | —                   | Believe & roll (re-roll dice)   |
+| `raise`         | `{ value: number }` | Claim higher without re-rolling |
+| `roll_raise`    | `{ value: number }` | Re-roll and claim higher        |
+| `pass`          | —                   | Pass dice to next player        |
+| `challenge`     | —                   | Challenge the current claim     |
+| `challenge_ack` | —                   | Acknowledge challenge result    |
+| `round_end_ack` | —                   | Acknowledge round end           |
 
 **Received messages:**
 

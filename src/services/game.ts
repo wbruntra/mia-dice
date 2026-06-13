@@ -1,7 +1,4 @@
-import {
-  applyMove,
-  stateForPlayer,
-} from '../game/engine'
+import { applyMove, stateForPlayer } from '../game/engine'
 import type { GameState, StoredMove } from '../game/types'
 import { rollDice, diceRank } from '../game/types'
 import { insertMove, reconstructState } from '../db/game-store'
@@ -42,7 +39,7 @@ function getAIMove(state: GameState): Move {
     const myLives = state.lives[state.turnPlayer!]
     const opLives = state.lives[1 - state.turnPlayer!]
     if (myLives === 1) return { type: 'challenge' }
-    const challengeProb = opLives === 1 ? 0.70 : opLives <= 2 ? 0.50 : 0.25
+    const challengeProb = opLives === 1 ? 0.7 : opLives <= 2 ? 0.5 : 0.25
     return Math.random() < challengeProb ? { type: 'challenge' } : { type: 'give_up' }
   }
 
@@ -70,13 +67,14 @@ function getAIMove(state: GameState): Move {
   // Low claims (31–42, ranks 0–3): almost certainly truthful — challenging is a bad bet
   // Mid-low (43–53, ranks 4–7): some room for bluff, increase a bit
   // Mid/high non-doubles (54–65, ranks 8–13): scale up toward 45%
-  const challengeProb = claim.value <= 0
-    ? 0
-    : claim.value <= 3
-      ? 0.05
-      : claim.value <= 7
-        ? 0.15
-        : 0.20 + (claim.value / 20) * 0.30
+  const challengeProb =
+    claim.value <= 0
+      ? 0
+      : claim.value <= 3
+        ? 0.05
+        : claim.value <= 7
+          ? 0.15
+          : 0.2 + (claim.value / 20) * 0.3
 
   if (Math.random() < challengeProb) return { type: 'challenge' }
 
@@ -124,7 +122,8 @@ function scheduleChallengeAutoAdvance(gameId: string) {
     setTimeout(async () => {
       challengeTimers.delete(gameId)
       const state = await reconstructState(gameId)
-      if (!state || (state.roundPhase !== 'challenge_result' && state.roundPhase !== 'game_over')) return
+      if (!state || (state.roundPhase !== 'challenge_result' && state.roundPhase !== 'game_over'))
+        return
       await insertMove(gameId, 'challenge_ack', null)
       const next = await reconstructState(gameId)
       if (!next) return
@@ -151,7 +150,12 @@ function scheduleRoundEndAutoAdvance(gameId: string) {
       const next = await reconstructState(gameId)
       if (!next) return
       broadcast(next)
-      if (next.cpuPlayer !== null && next.turnPlayer === next.cpuPlayer && next.roundPhase === 'claim' && next.status === 'playing') {
+      if (
+        next.cpuPlayer !== null &&
+        next.turnPlayer === next.cpuPlayer &&
+        next.roundPhase === 'claim' &&
+        next.status === 'playing'
+      ) {
         scheduleAIMove(gameId)
       }
     }, ROUND_END_ACK_TIMEOUT_MS),
@@ -160,7 +164,10 @@ function scheduleRoundEndAutoAdvance(gameId: string) {
 
 export async function startGame(gameId: string, dice: [number, number], cpuPlayer?: number) {
   clearPendingAbandonOnStart(gameId)
-  await insertMove(gameId, 'game_start', null, { dice, ...(cpuPlayer !== undefined ? { cpuPlayer } : {}) })
+  await insertMove(gameId, 'game_start', null, {
+    dice,
+    ...(cpuPlayer !== undefined ? { cpuPlayer } : {}),
+  })
   const state = await reconstructState(gameId)
   if (!state) throw new Error('Failed to reconstruct state after game_start')
   broadcast(state)
@@ -169,10 +176,7 @@ export async function startGame(gameId: string, dice: [number, number], cpuPlaye
   }
 }
 
-function buildStoredMove(
-  move: Move,
-  player: number,
-): { stored: StoredMove; error?: string } {
+function buildStoredMove(move: Move, player: number): { stored: StoredMove; error?: string } {
   switch (move.type) {
     case 'claim':
       return { stored: { type: 'claim', player, data: { value: move.value } } }
@@ -183,7 +187,9 @@ function buildStoredMove(
     case 'raise':
       return { stored: { type: 'raise', player, data: { value: move.value } } }
     case 'roll_raise':
-      return { stored: { type: 'roll_raise', player, data: { value: move.value, dice: rollDice() } } }
+      return {
+        stored: { type: 'roll_raise', player, data: { value: move.value, dice: rollDice() } },
+      }
     case 'challenge':
       return { stored: { type: 'challenge', player } }
     case 'give_up':
@@ -225,7 +231,12 @@ export async function handleMove(
   if (validation.error) return { error: validation.error }
 
   // Insert the move
-  await insertMove(gameId, stored.type, stored.player !== undefined ? stored.player : null, stored.data)
+  await insertMove(
+    gameId,
+    stored.type,
+    stored.player !== undefined ? stored.player : null,
+    stored.data,
+  )
 
   broadcast(validation.state)
 

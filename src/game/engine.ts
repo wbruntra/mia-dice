@@ -44,7 +44,11 @@ export function newGame(dice: [number, number]): Partial<GameState> {
   }
 }
 
-export function newRound(state: GameState, startingPlayer: number, dice: [number, number]): GameState {
+export function newRound(
+  state: GameState,
+  startingPlayer: number,
+  dice: [number, number],
+): GameState {
   return {
     ...state,
     dice,
@@ -90,7 +94,8 @@ export function rollDiceAction(
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
   if (!state.currentClaim) return { state, error: 'No claim to roll against' }
-  if (state.currentClaim.value === 20) return { state, error: 'Mia claimed — must give up or look' }
+  if (state.currentClaim.value === 20)
+    return { state, error: 'Mia claimed — must give up or look' }
 
   return {
     state: {
@@ -109,7 +114,8 @@ export function raise(
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
   if (!state.currentClaim) return { state, error: 'No claim to raise' }
-  if (state.currentClaim.value === 20) return { state, error: 'Mia claimed — must give up or look' }
+  if (state.currentClaim.value === 20)
+    return { state, error: 'Mia claimed — must give up or look' }
   if (value <= state.currentClaim.value) {
     return {
       state,
@@ -137,7 +143,8 @@ export function rollAndRaise(
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
   if (!state.currentClaim) return { state, error: 'No claim to raise' }
-  if (state.currentClaim.value === 20) return { state, error: 'Mia claimed — must give up or look' }
+  if (state.currentClaim.value === 20)
+    return { state, error: 'Mia claimed — must give up or look' }
   if (value <= state.currentClaim.value) {
     return {
       state,
@@ -157,14 +164,12 @@ export function rollAndRaise(
   }
 }
 
-export function passDice(
-  state: GameState,
-  player: number,
-): { state: GameState; error?: string } {
+export function passDice(state: GameState, player: number): { state: GameState; error?: string } {
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.roundPhase !== 'claim') return { state, error: 'Not in claim phase' }
   if (!state.currentClaim) return { state, error: 'No active claim' }
-  if (state.currentClaim.value === 20) return { state, error: 'Mia claimed — must give up or look' }
+  if (state.currentClaim.value === 20)
+    return { state, error: 'Mia claimed — must give up or look' }
   if (state.originalCaller === player) {
     return { state, error: 'Dice returned — must challenge or raise' }
   }
@@ -397,10 +402,9 @@ export function stateForPlayer(state: GameState, player: number) {
           challengerWins: state.challengeResult.challengerWins,
           livesLost: state.challengeResult.livesLost,
           iChallenged: state.challengeResult.challenger === player,
-          iWon:
-            state.challengeResult.challengerWins
-              ? state.challengeResult.challenger === player
-              : state.challengeResult.challenged === player,
+          iWon: state.challengeResult.challengerWins
+            ? state.challengeResult.challenger === player
+            : state.challengeResult.challenged === player,
           gaveUp: state.challengeResult.gaveUp,
         }
       : null,
@@ -424,9 +428,19 @@ export function applyMove(
 
   switch (move.type) {
     case 'game_start': {
-      const { dice, cpuPlayer } = (move.data || {}) as { dice?: [number, number]; cpuPlayer?: number }
+      const { dice, cpuPlayer } = (move.data || {}) as {
+        dice?: [number, number]
+        cpuPlayer?: number
+      }
       if (!dice) return { state, error: 'game_start missing dice' }
-      return { state: { ...state, ...newGame(dice), cpuPlayer: cpuPlayer ?? null, lastAction: 'Game started' } }
+      return {
+        state: {
+          ...state,
+          ...newGame(dice),
+          cpuPlayer: cpuPlayer ?? null,
+          lastAction: 'Game started',
+        },
+      }
     }
 
     case 'claim': {
@@ -435,7 +449,12 @@ export function applyMove(
       if (value === undefined) return { state, error: 'claim missing value' }
       const r = makeClaim(state, player, value)
       if (r.error) return r
-      return { state: { ...r.state, lastAction: `${state.players[player]} rolled, then bid ${rankDisplay(value)}` } }
+      return {
+        state: {
+          ...r.state,
+          lastAction: `${state.players[player]} rolled, then bid ${rankDisplay(value)}`,
+        },
+      }
     }
 
     case 'roll': {
@@ -474,7 +493,12 @@ export function applyMove(
       if (!dice) return { state, error: 'roll_raise missing dice' }
       const r = rollAndRaise(state, player, value, dice)
       if (r.error) return r
-      return { state: { ...r.state, lastAction: `${state.players[player]} rolled, then bid ${rankDisplay(value)}` } }
+      return {
+        state: {
+          ...r.state,
+          lastAction: `${state.players[player]} rolled, then bid ${rankDisplay(value)}`,
+        },
+      }
     }
 
     case 'challenge': {
@@ -488,7 +512,9 @@ export function applyMove(
       if (player === undefined) return { state, error: 'Missing player for give_up' }
       const result = giveUp(state, player)
       if ('error' in result) return result
-      return { state: { ...result.state, lastAction: `${state.players[player]} gave up against Mia` } }
+      return {
+        state: { ...result.state, lastAction: `${state.players[player]} gave up against Mia` },
+      }
     }
 
     case 'surrender': {
@@ -536,7 +562,9 @@ export function applyMove(
       const loser = state.challengeResult.challengerWins
         ? state.challengeResult.challenged
         : state.challengeResult.challenger
-      return { state: { ...newRound(state, 1 - loser, nextRoundDice), lastAction: 'New round started' } }
+      return {
+        state: { ...newRound(state, 1 - loser, nextRoundDice), lastAction: 'New round started' },
+      }
     }
 
     default:

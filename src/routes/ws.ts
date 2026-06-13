@@ -2,9 +2,15 @@ import type { ServerWebSocket } from 'bun'
 import { stateForPlayer } from '../game/engine'
 import { loadGame, reconstructState, listPendingGames, saveGameMetadata } from '../db/game-store'
 import {
-  registerConnection, unregisterConnection, broadcast,
-  registerLobbyConnection, unregisterLobbyConnection, broadcastLobbyUpdate,
-  recordPong, schedulePendingAbandon, cancelPendingAbandon,
+  registerConnection,
+  unregisterConnection,
+  broadcast,
+  registerLobbyConnection,
+  unregisterLobbyConnection,
+  broadcastLobbyUpdate,
+  recordPong,
+  schedulePendingAbandon,
+  cancelPendingAbandon,
 } from '../services/connections'
 import { handleMove } from '../services/game'
 import type { Move } from '../services/game'

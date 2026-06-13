@@ -66,6 +66,7 @@ Classic bluffing dice game with two dice and a cup.
 **Ranking** (best to worst): Mia (21), 11, 22, 33, 44, 55, 66, 65, 64, 63, 62, 61, 54, 53, 52, 51, 43, 42, 41, 32, 31
 
 **Flow:**
+
 1. Player 1 rolls, looks, announces a claim (can bluff up or down)
 2. Dice passed to next player, who can:
    - **Believe & Roll**: re-roll, look, claim higher
@@ -75,6 +76,7 @@ Classic bluffing dice game with two dice and a cup.
 
 **Mia (21) special rules:**
 When a player claims Mia, the next player CANNOT raise, roll, or pass. They must choose:
+
 - **Give Up**: accept the claim, lose 1 life, round ends
 - **Look**: reveal the dice. If the dice really are Mia (21), the looker loses 2 lives. If not, the Mia claimer was bluffing and loses 1 life.
 

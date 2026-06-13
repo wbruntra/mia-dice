@@ -115,7 +115,9 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
       {promptGameId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
           <div className="w-full max-w-xs bg-pirate-wood border border-pirate-gold/40 rounded-2xl p-6 flex flex-col gap-4 shadow-xl">
-            <h2 className="font-pirate text-2xl text-pirate-gold text-center">What's your name?</h2>
+            <h2 className="font-pirate text-2xl text-pirate-gold text-center">
+              What's your name?
+            </h2>
             <input
               type="text"
               placeholder="Your name"
@@ -133,10 +135,7 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
             >
               Join Game
             </button>
-            <button
-              onClick={() => setPromptGameId(null)}
-              className="w-full btn-parchment"
-            >
+            <button onClick={() => setPromptGameId(null)} className="w-full btn-parchment">
               Cancel
             </button>
           </div>
@@ -177,10 +176,7 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
             >
               vs Computer
             </button>
-            <button
-              onClick={() => setShowJoin(true)}
-              className="w-full btn-parchment"
-            >
+            <button onClick={() => setShowJoin(true)} className="w-full btn-parchment">
               Join Game
             </button>
             {savedSession && (
@@ -208,10 +204,7 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
                 </div>
               </div>
             )}
-            <PendingGamesList
-              currentName={name}
-              onJoinGame={joinSpecificGame}
-            />
+            <PendingGamesList currentName={name} onJoinGame={joinSpecificGame} />
           </div>
         ) : (
           <div className="flex flex-col gap-3">

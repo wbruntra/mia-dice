@@ -63,12 +63,8 @@
           "name": "game_moves_game_id_games_id_fk",
           "tableFrom": "game_moves",
           "tableTo": "games",
-          "columnsFrom": [
-            "game_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["game_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }

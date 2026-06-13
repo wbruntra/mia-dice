@@ -20,7 +20,7 @@ export class RuleAgent implements Agent {
       const myLives = state.lives[player]
       const opLives = state.lives[1 - player]
       if (myLives === 1) return { type: 'challenge' }
-      const challengeProb = opLives === 1 ? 0.70 : opLives <= 2 ? 0.50 : 0.25
+      const challengeProb = opLives === 1 ? 0.7 : opLives <= 2 ? 0.5 : 0.25
       return Math.random() < challengeProb ? { type: 'challenge' } : { type: 'give_up' }
     }
 
@@ -40,13 +40,14 @@ export class RuleAgent implements Agent {
       return { type: 'roll_raise', value: Math.min(20, claim.value + 1) }
     }
 
-    const challengeProb = claim.value <= 0
-      ? 0
-      : claim.value <= 3
-        ? 0.05
-        : claim.value <= 7
-          ? 0.15
-          : 0.20 + (claim.value / 20) * 0.30
+    const challengeProb =
+      claim.value <= 0
+        ? 0
+        : claim.value <= 3
+          ? 0.05
+          : claim.value <= 7
+            ? 0.15
+            : 0.2 + (claim.value / 20) * 0.3
 
     if (Math.random() < challengeProb) return { type: 'challenge' }
     if (Math.random() < 0.15) return { type: 'pass' }

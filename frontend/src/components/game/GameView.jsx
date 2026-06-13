@@ -328,14 +328,23 @@ export default function GameView() {
       {/* Actions */}
       <div className="min-h-[52px] flex items-center justify-center relative z-10">
         {actions.length > 0 ? (
-          <div className={`w-full grid gap-3 ${{ 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-2' }[actions.length]}`}>
+          <div
+            className={`w-full grid gap-3 ${{ 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-2' }[actions.length]}`}
+          >
             {actions.map(({ label, style, onClick }) => (
-              <button key={label} onClick={onClick} className={`${style} w-full`}>{label}</button>
+              <button key={label} onClick={onClick} className={`${style} w-full`}>
+                {label}
+              </button>
             ))}
           </div>
         ) : (
-          !showActions && state.roundPhase === 'claim' && !isMyTurn && hasCurrentClaim && (
-            <p className="text-sm text-pirate-parchment/40 italic">Waiting for {opponent.name}...</p>
+          !showActions &&
+          state.roundPhase === 'claim' &&
+          !isMyTurn &&
+          hasCurrentClaim && (
+            <p className="text-sm text-pirate-parchment/40 italic">
+              Waiting for {opponent.name}...
+            </p>
           )
         )}
       </div>
@@ -348,7 +357,11 @@ export default function GameView() {
       )}
 
       {needRoundEndAck && (
-        <RoundEndOverlay result={state.challengeResult} playerStates={state.playerStates} onAck={() => handleAck('round_end')} />
+        <RoundEndOverlay
+          result={state.challengeResult}
+          playerStates={state.playerStates}
+          onAck={() => handleAck('round_end')}
+        />
       )}
 
       {state.roundPhase === 'game_over' && (
@@ -389,10 +402,7 @@ export default function GameView() {
               >
                 Cancel
               </button>
-              <button
-                onClick={handleSurrender}
-                className="flex-1 btn-crimson"
-              >
+              <button onClick={handleSurrender} className="flex-1 btn-crimson">
                 Surrender
               </button>
             </div>
@@ -533,9 +543,7 @@ function RoundEndOverlay({ result, playerStates, onAck }) {
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
       <div className="bg-pirate-wood-light border border-pirate-gold/40 rounded-2xl p-6 max-w-sm w-full text-center">
         <p className="font-pirate text-3xl text-pirate-gold mb-4">⚓ Round Over</p>
-        <p className="text-pirate-parchment/60 text-sm">
-          {winner} won the challenge!
-        </p>
+        <p className="text-pirate-parchment/60 text-sm">{winner} won the challenge!</p>
         <button onClick={onAck} className="mt-4 btn-gold">
           Next Round
         </button>
@@ -544,7 +552,15 @@ function RoundEndOverlay({ result, playerStates, onAck }) {
   )
 }
 
-function GameOverOverlay({ winner, playerStates, rematchOfferedBy, player, cpuPlayer, send, onLeave }) {
+function GameOverOverlay({
+  winner,
+  playerStates,
+  rematchOfferedBy,
+  player,
+  cpuPlayer,
+  send,
+  onLeave,
+}) {
   const me = playerStates.find((p) => p.isMe)
   const opponent = playerStates.find((p) => !p.isMe)
   const iWon = winner === me.name
@@ -578,7 +594,9 @@ function GameOverOverlay({ winner, playerStates, rematchOfferedBy, player, cpuPl
             </button>
           )}
           {!isVsCpu && hasOffered && (
-            <p className="text-pirate-parchment/60 text-sm">Waiting for {opponent.name} to accept...</p>
+            <p className="text-pirate-parchment/60 text-sm">
+              Waiting for {opponent.name} to accept...
+            </p>
           )}
           {!isVsCpu && opponentOffered && (
             <button onClick={handleAcceptRematch} className="btn-ocean">
@@ -631,7 +649,11 @@ function ClaimPickerModal({ currentClaim, myDice, onSelect, onClose }) {
               }`}
             >
               {rank.label}
-              <p className={`text-xs font-normal mt-0.5 ${isMyRoll ? 'text-blue-400' : 'invisible'}`}>your roll</p>
+              <p
+                className={`text-xs font-normal mt-0.5 ${isMyRoll ? 'text-blue-400' : 'invisible'}`}
+              >
+                your roll
+              </p>
             </button>
           )
         })}

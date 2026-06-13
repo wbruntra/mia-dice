@@ -36,9 +36,9 @@ function diceRelation(state: GameState, player: number): string {
 
 function softmax(logits: number[]): number[] {
   const max = Math.max(...logits)
-  const exp = logits.map(l => Math.exp(l - max))
+  const exp = logits.map((l) => Math.exp(l - max))
   const sum = exp.reduce((a, b) => a + b, 0)
-  return exp.map(e => e / sum)
+  return exp.map((e) => e / sum)
 }
 
 function sample(probs: number[]): number {
@@ -135,7 +135,10 @@ export class TabularAgent implements Agent {
       case 'raise_min':
         return { type: 'roll_raise', value: Math.min(20, claimVal + 1) }
       case 'raise_bluff':
-        return { type: 'roll_raise', value: Math.min(20, claimVal + Math.floor(Math.random() * 3) + 2) }
+        return {
+          type: 'roll_raise',
+          value: Math.min(20, claimVal + Math.floor(Math.random() * 3) + 2),
+        }
       default:
         return { type: 'challenge' }
     }
