@@ -5,7 +5,9 @@
   "private": true,
   "scripts": {
     "dev": "bun run --parallel backend frontend",
+    "dev-preact": "bun run --parallel backend preact-frontend",
     "frontend": "cd frontend && bun run dev",
+    "preact-frontend": "cd preact-frontend && bun run dev",
     "backend": "bun --watch bin/server.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

@@ -1,109 +1,73 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import 'tailwindcss';
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: ui-monospace, Consolas, monospace;
+  --font-pirate: 'Pirata One', cursive;
+  --color-pirate-navy: #061220;
+  --color-pirate-navy-light: #0a1628;
+  --color-pirate-wood: #2c1810;
+  --color-pirate-wood-light: #3e2723;
+  --color-pirate-gold: #d4a017;
+  --color-pirate-gold-light: #e6b422;
+  --color-pirate-parchment: #f5f0e8;
+  --color-pirate-crimson: #8b0000;
+  --color-pirate-ocean: #0d7377;
+}
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+body,
+#root {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  color: #f5f0e8;
+  background-color: transparent;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+.bg-pirate {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background-image: url('/pirate-bg.webp');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #061220;
+  opacity: 1;
 }
 
-body {
-  margin: 0;
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 12px);
 }
 
-#app {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/* Pirate button base styles */
+.btn-gold {
+  @apply px-4 py-4 bg-pirate-gold hover:bg-pirate-gold-light text-black font-semibold
+         rounded-xl transition-all active:scale-95 shadow-lg shadow-pirate-gold/20;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+.btn-ocean {
+  @apply px-4 py-4 bg-pirate-ocean hover:bg-pirate-ocean/80 text-white font-semibold
+         rounded-xl transition-all active:scale-95 shadow-md;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+.btn-crimson {
+  @apply px-4 py-4 bg-pirate-crimson hover:bg-pirate-crimson/80 text-white font-semibold
+         rounded-xl transition-all active:scale-95 shadow-md;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+.btn-parchment {
+  @apply px-4 py-4 bg-pirate-wood/60 hover:bg-pirate-wood/80 text-pirate-parchment/80
+         font-semibold rounded-xl transition-all active:scale-95 border border-pirate-gold/20;
 }
