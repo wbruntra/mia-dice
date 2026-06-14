@@ -3,6 +3,8 @@ import { useGameUI } from '../../hooks/useGameUI'
 import { Die, getRankLabel, diceRank, RANKS } from '../../utils/game'
 import { toast } from 'sonner'
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { HiInformationCircle } from 'react-icons/hi2'
+import RulesModal from '../lobby/RulesModal'
 
 function diceFromDisplay(display) {
   if (!display) return null
@@ -41,6 +43,7 @@ export default function GameView() {
   const [rolling, setRolling] = useState(false)
   const [animDice, setAnimDice] = useState(null)
   const [showSurrenderConfirm, setShowSurrenderConfirm] = useState(false)
+  const [showRules, setShowRules] = useState(false)
   const rollTimerRef = useRef(null)
   const rollIntervalRef = useRef(null)
 
@@ -227,10 +230,21 @@ export default function GameView() {
           </button>
         )}
         <span className="font-pirate text-pirate-gold text-base">Round {state.roundNumber}</span>
-        <span className="text-pirate-parchment/30 text-sm">
-          {state.status === 'waiting' && 'Waiting for opponent...'}
-          {!connected && ' (reconnecting)'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-pirate-parchment/30 text-sm">
+            {state.status === 'waiting' && 'Waiting for opponent...'}
+            {!connected && ' (reconnecting)'}
+          </span>
+          {state.status === 'playing' && (
+            <button
+              onClick={() => setShowRules(true)}
+              className="text-pirate-parchment/40 hover:text-pirate-gold transition-colors"
+              aria-label="How to play"
+            >
+              <HiInformationCircle size={22} />
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Opponent Area */}
@@ -387,6 +401,8 @@ export default function GameView() {
           }}
         />
       )}
+
+      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
 
       {showSurrenderConfirm && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
