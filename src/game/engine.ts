@@ -563,7 +563,7 @@ export function applyMove(
         ? state.challengeResult.challenged
         : state.challengeResult.challenger
       return {
-        state: { ...newRound(state, 1 - loser, nextRoundDice), lastAction: 'New round started' },
+        state: { ...newRound(state, loser, nextRoundDice), lastAction: 'New round started' },
       }
     }
 
