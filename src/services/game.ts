@@ -195,7 +195,7 @@ function buildStoredMove(move: Move, player: number): { stored: StoredMove; erro
     case 'give_up':
       return { stored: { type: 'give_up', player } }
     case 'surrender':
-      return { stored: { type: 'surrender', player } }
+      return { stored: { type: 'surrender', player, data: { nextRoundDice: rollDice() } } }
     case 'rematch_offer':
       return { stored: { type: 'rematch_offer', player } }
     case 'rematch_accept': {

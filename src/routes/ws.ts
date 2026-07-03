@@ -12,8 +12,9 @@ import {
   schedulePendingAbandon,
   cancelPendingAbandon,
 } from '../services/connections'
-import { handleMove } from '../services/game'
+import { handleMove, startGame } from '../services/game'
 import type { Move } from '../services/game'
+import { rollDice } from '../game/types'
 
 export type WsData = {
   gameId: string | null
@@ -68,6 +69,30 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
     const { gameId, player } = ws.data
     if (!gameId || player === null) {
       send(ws, { type: 'error', message: 'Not joined' })
+      return
+    }
+
+    if (msg.type === 'start_game') {
+      if (player !== 0) {
+        send(ws, { type: 'error', message: 'Only the host can start the game' })
+        return
+      }
+      const metadata = await loadGame(gameId)
+      if (!metadata) {
+        send(ws, { type: 'error', message: 'Game not found' })
+        return
+      }
+      if (metadata.status !== 'pending') {
+        send(ws, { type: 'error', message: 'Game already started' })
+        return
+      }
+      if (metadata.players.length < 2) {
+        send(ws, { type: 'error', message: 'Need at least 2 players to start' })
+        return
+      }
+      await saveGameMetadata(gameId, { status: 'active' })
+      await startGame(gameId, rollDice())
+      await broadcastLobbyUpdate()
       return
     }
 

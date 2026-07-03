@@ -26,6 +26,28 @@ export function blankState(id: string, players: string[], startingLives: number)
   }
 }
 
+// Return the next index after `from` whose player still has lives, wrapping
+// around the table. Falls back to `from` if no one else is active.
+export function nextActivePlayer(state: GameState, from: number): number {
+  const n = state.players.length
+  for (let i = 1; i <= n; i++) {
+    const idx = (from + i) % n
+    if (state.lives[idx]! > 0) return idx
+  }
+  return from
+}
+
+// Apply end-of-game detection: if one or zero players remain with lives, mark the
+// game finished and record the winner. Mutates the passed state and returns it.
+function applyWinner(state: GameState): GameState {
+  const active = state.lives.map((l, i) => (l > 0 ? i : -1)).filter((i) => i >= 0)
+  if (active.length <= 1) {
+    state.winner = active.length === 1 ? state.players[active[0]!]! : null
+    state.status = 'finished'
+  }
+  return state
+}
+
 export function newGame(dice: [number, number]): Partial<GameState> {
   return {
     status: 'playing',
@@ -49,13 +71,16 @@ export function newRound(
   startingPlayer: number,
   dice: [number, number],
 ): GameState {
+  // If the intended starter was eliminated, hand off to the next active player.
+  const start =
+    state.lives[startingPlayer]! > 0 ? startingPlayer : nextActivePlayer(state, startingPlayer)
   return {
     ...state,
     dice,
     currentClaim: null,
-    originalCaller: startingPlayer,
-    lastRoller: startingPlayer,
-    turnPlayer: startingPlayer,
+    originalCaller: start,
+    lastRoller: start,
+    turnPlayer: start,
     roundPhase: 'claim',
     roundNumber: state.roundNumber + 1,
     challengeResult: null,
@@ -81,7 +106,7 @@ export function makeClaim(
       currentClaim: { value, player },
       originalCaller: player,
       lastRoller: player,
-      turnPlayer: 1 - player,
+      turnPlayer: nextActivePlayer(state, player),
     },
   }
 }
@@ -129,7 +154,7 @@ export function raise(
       currentClaim: { value, player },
       originalCaller: player,
       lastRoller: player,
-      turnPlayer: 1 - player,
+      turnPlayer: nextActivePlayer(state, player),
     },
   }
 }
@@ -159,7 +184,7 @@ export function rollAndRaise(
       currentClaim: { value, player },
       originalCaller: player,
       lastRoller: player,
-      turnPlayer: 1 - player,
+      turnPlayer: nextActivePlayer(state, player),
     },
   }
 }
@@ -178,7 +203,7 @@ export function passDice(state: GameState, player: number): { state: GameState; 
     state: {
       ...state,
       currentClaim: { ...state.currentClaim, player },
-      turnPlayer: 1 - player,
+      turnPlayer: nextActivePlayer(state, player),
       lastRoller: null,
     },
   }
@@ -193,6 +218,7 @@ export function resolveChallenge(
   }
   if (!state.currentClaim) return { state, error: 'No claim to challenge' }
   if (!state.dice) return { state, error: 'Dice not rolled' }
+  if (state.turnPlayer !== challenger) return { state, error: 'Not your turn' }
 
   const claimedValue = state.currentClaim.value
   const actualValue = diceRank(state.dice)
@@ -239,13 +265,7 @@ export function resolveChallenge(
   nextState.challengeResult = result
   nextState.challengeAcks = []
 
-  if (nextState.lives[0] <= 0) {
-    nextState.winner = nextState.players[1]
-    nextState.status = 'finished'
-  } else if (nextState.lives[1] <= 0) {
-    nextState.winner = nextState.players[0]
-    nextState.status = 'finished'
-  }
+  applyWinner(nextState)
 
   return { state: nextState, result }
 }
@@ -277,27 +297,32 @@ export function giveUp(
   nextState.challengeResult = result
   nextState.challengeAcks = []
 
-  if (nextState.lives[0] <= 0) {
-    nextState.winner = nextState.players[1]
-    nextState.status = 'finished'
-  } else if (nextState.lives[1] <= 0) {
-    nextState.winner = nextState.players[0]
-    nextState.status = 'finished'
-  }
+  applyWinner(nextState)
 
   return { state: nextState, result }
 }
 
-export function surrender(state: GameState, player: number): { state: GameState; error?: string } {
+export function surrender(
+  state: GameState,
+  player: number,
+  nextRoundDice: [number, number],
+): { state: GameState; error?: string } {
   if (state.status === 'finished') return { state, error: 'Game already finished' }
 
-  const nextState = { ...state, lives: [...state.lives] }
-  nextState.lives[player] = 0
-  nextState.winner = nextState.players[1 - player]
-  nextState.status = 'finished'
-  nextState.roundPhase = 'game_over'
+  const withLives = { ...state, lives: [...state.lives] }
+  withLives.lives[player] = 0
 
-  return { state: nextState }
+  const active = withLives.lives.filter((l) => l > 0).length
+  if (active <= 1) {
+    // Only one (or zero) player left standing — the game is over.
+    const nextState = applyWinner(withLives)
+    nextState.roundPhase = 'game_over'
+    return { state: nextState }
+  }
+
+  // Others remain: the surrendering player is eliminated and a fresh round begins.
+  const start = nextActivePlayer(withLives, player)
+  return { state: newRound(withLives, start, nextRoundDice) }
 }
 
 export function rematchOffer(
@@ -519,7 +544,8 @@ export function applyMove(
 
     case 'surrender': {
       if (player === undefined) return { state, error: 'Missing player for surrender' }
-      const result = surrender(state, player)
+      const { nextRoundDice } = (move.data || {}) as { nextRoundDice?: [number, number] }
+      const result = surrender(state, player, nextRoundDice ?? [1, 1])
       if (result.error) return result
       return {
         state: {

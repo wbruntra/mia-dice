@@ -8,6 +8,8 @@ import { loadGame, saveGameMetadata, reconstructState, listPendingGames } from '
 import { startGame } from '../services/game'
 import { broadcastLobbyUpdate } from '../services/connections'
 
+const MAX_PLAYERS = 8
+
 function generateId(): string {
   return Math.random().toString(36).substring(2, 10)
 }
@@ -47,14 +49,12 @@ app.post('/api/games/:id/join', async (c) => {
 
   const metadata = await loadGame(gameId)
   if (!metadata) return c.json({ error: 'Game not found' }, 404)
-  if (metadata.players.length >= 2) return c.json({ error: 'Game is full' }, 400)
+  if (metadata.status !== 'pending') return c.json({ error: 'Game already started' }, 400)
+  if (metadata.players.length >= MAX_PLAYERS) return c.json({ error: 'Game is full' }, 400)
   if (metadata.players.includes(playerName)) return c.json({ error: 'Name already taken' }, 400)
 
   const newPlayers = [...metadata.players, playerName]
-  await saveGameMetadata(gameId, { players: newPlayers, status: 'active' })
-
-  const dice = rollDice()
-  await startGame(gameId, dice)
+  await saveGameMetadata(gameId, { players: newPlayers })
   await broadcastLobbyUpdate()
 
   return c.json({ gameId, playerName })

@@ -92,7 +92,16 @@ export default function GameView() {
 
   if (state.status === 'waiting') {
     const joinUrl = `${window.location.origin}${window.location.pathname}?join=${state.id}`
-    return <WaitingRoom gameId={state.id} joinUrl={joinUrl} onLeave={onLeave} />
+    return (
+      <WaitingRoom
+        gameId={state.id}
+        joinUrl={joinUrl}
+        onLeave={onLeave}
+        playerStates={state.playerStates}
+        isHost={state.player === 0}
+        onStart={() => send({ type: 'start_game' })}
+      />
+    )
   }
 
   if (error) {
@@ -113,7 +122,7 @@ export default function GameView() {
   const showActions = isMyTurn && state.roundPhase === 'claim' && state.status === 'playing'
 
   const me = state.playerStates.find((p) => p.isMe)
-  const opponent = state.playerStates.find((p) => !p.isMe)
+  const turnPlayerName = state.playerStates[state.turnPlayer]?.name
 
   function doSend(move) {
     send(move)
@@ -247,25 +256,40 @@ export default function GameView() {
         </div>
       </header>
 
-      {/* Opponent Area */}
-      <div className="flex items-center justify-between bg-pirate-wood/60 rounded-xl p-4 border border-pirate-gold/20 relative z-10">
-        <div>
-          <p className="text-sm text-pirate-parchment/70">{opponent.name}</p>
-          <div className="flex gap-0.5 mt-1">
-            {Array.from({ length: opponent.lives }, (_, i) => (
-              <span key={i} className="text-red-500 text-lg">
-                &#9829;
-              </span>
-            ))}
-            {Array.from({ length: Math.max(0, state.startingLives - opponent.lives) }, (_, i) => (
-              <span key={`e-${i}`} className="text-pirate-wood-light/50 text-lg">
-                &#9829;
-              </span>
-            ))}
-          </div>
-        </div>
-        {state.turnPlayer !== state.player && state.roundPhase === 'claim' && (
-          <span className="text-pirate-gold text-xs animate-pulse">Thinking...</span>
+      {/* Opponents Area */}
+      <div className="flex flex-col gap-2 relative z-10">
+        {state.playerStates.map((p, i) =>
+          p.isMe ? null : (
+            <div
+              key={i}
+              className="flex items-center justify-between bg-pirate-wood/60 rounded-xl p-4 border border-pirate-gold/20"
+            >
+              <div>
+                <p
+                  className={`text-sm ${p.lives === 0 ? 'text-pirate-parchment/30 line-through' : 'text-pirate-parchment/70'}`}
+                >
+                  {p.name} {state.currentClaim?.player === i && '📢'}
+                </p>
+                <div className="flex gap-0.5 mt-1">
+                  {Array.from({ length: p.lives }, (_, k) => (
+                    <span key={k} className="text-red-500 text-lg">
+                      &#9829;
+                    </span>
+                  ))}
+                  {Array.from({ length: Math.max(0, state.startingLives - p.lives) }, (_, k) => (
+                    <span key={`e-${k}`} className="text-pirate-wood-light/50 text-lg">
+                      &#9829;
+                    </span>
+                  ))}
+                </div>
+              </div>
+              {state.turnPlayer === i &&
+                state.roundPhase === 'claim' &&
+                state.status === 'playing' && (
+                  <span className="text-pirate-gold text-xs animate-pulse">Thinking...</span>
+                )}
+            </div>
+          ),
         )}
       </div>
 
@@ -310,7 +334,10 @@ export default function GameView() {
                 </p>
                 <p className="font-pirate text-4xl text-pirate-gold">{currentClaimDisplay}</p>
                 <p className="text-xs text-pirate-parchment/40 mt-0.5">
-                  by {state.currentClaim?.player === state.player ? 'You' : opponent.name}
+                  by{' '}
+                  {state.currentClaim?.player === state.player
+                    ? 'You'
+                    : state.playerStates[state.currentClaim?.player]?.name}
                 </p>
               </>
             )}
@@ -357,7 +384,7 @@ export default function GameView() {
           !isMyTurn &&
           hasCurrentClaim && (
             <p className="text-sm text-pirate-parchment/40 italic">
-              Waiting for {opponent.name}...
+              Waiting for {turnPlayerName}...
             </p>
           )
         )}
@@ -583,6 +610,8 @@ function GameOverOverlay({
   const hasOffered = rematchOfferedBy === player
   const opponentOffered = rematchOfferedBy !== null && rematchOfferedBy !== player
   const isVsCpu = cpuPlayer !== null
+  // Offer/accept rematch only maps cleanly to a 1v1 table.
+  const canRematch = playerStates.length === 2
 
   function handleOfferRematch() {
     send({ type: 'rematch_offer' })
@@ -597,24 +626,24 @@ function GameOverOverlay({
       <div className="bg-pirate-wood-light border border-pirate-gold rounded-2xl p-8 max-w-sm w-full text-center">
         <p className="text-5xl mb-4">{iWon ? '🏆' : '💀'}</p>
         <p className="font-pirate text-3xl text-pirate-gold mb-2">
-          {iWon ? 'You Win!' : `${opponent.name} Wins!`}
+          {iWon ? 'You Win!' : `${winner} Wins!`}
         </p>
         <p className="text-pirate-parchment/50 text-sm mb-6">
           {iWon ? 'The seas are yours, captain!' : 'Walk the plank...'}
         </p>
 
         <div className="flex flex-col gap-3">
-          {!isVsCpu && rematchOfferedBy === null && (
+          {canRematch && !isVsCpu && rematchOfferedBy === null && (
             <button onClick={handleOfferRematch} className="btn-gold">
               Offer Rematch
             </button>
           )}
-          {!isVsCpu && hasOffered && (
+          {canRematch && !isVsCpu && hasOffered && (
             <p className="text-pirate-parchment/60 text-sm">
               Waiting for {opponent.name} to accept...
             </p>
           )}
-          {!isVsCpu && opponentOffered && (
+          {canRematch && !isVsCpu && opponentOffered && (
             <button onClick={handleAcceptRematch} className="btn-ocean">
               Accept Rematch
             </button>
@@ -683,8 +712,9 @@ function ClaimPickerModal({ currentClaim, myDice, onSelect, onClose }) {
   )
 }
 
-function WaitingRoom({ gameId, joinUrl, onLeave }) {
+function WaitingRoom({ gameId, joinUrl, onLeave, playerStates = [], isHost, onStart }) {
   const [copied, setCopied] = useState(false)
+  const canStart = playerStates.length >= 2
 
   const handleCopy = useCallback(async () => {
     try {
@@ -723,10 +753,43 @@ function WaitingRoom({ gameId, joinUrl, onLeave }) {
         or code: <span className="font-mono text-pirate-parchment/50">{gameId}</span>
       </p>
 
-      <p className="text-pirate-parchment/40 text-sm relative z-10">
-        Waiting for opponent to join...
-      </p>
-      <button onClick={onLeave} className="mt-4 btn-parchment relative z-10">
+      {/* Joined players roster */}
+      <div className="w-full max-w-sm bg-pirate-wood/60 border border-pirate-gold/20 rounded-xl p-3 relative z-10">
+        <p className="text-pirate-parchment/50 text-xs uppercase tracking-wider mb-2">
+          Players ({playerStates.length})
+        </p>
+        <div className="flex flex-col gap-1">
+          {playerStates.map((p, i) => (
+            <p key={i} className="text-sm text-pirate-parchment">
+              {p.name} {i === 0 && <span className="text-pirate-gold/60 text-xs">(host)</span>}
+              {p.isMe && <span className="text-pirate-parchment/40 text-xs"> — you</span>}
+            </p>
+          ))}
+        </div>
+      </div>
+
+      {isHost ? (
+        <>
+          <button
+            onClick={onStart}
+            disabled={!canStart}
+            className="w-full max-w-sm btn-gold disabled:opacity-50 relative z-10"
+          >
+            Start Game
+          </button>
+          {!canStart && (
+            <p className="text-pirate-parchment/40 text-xs relative z-10">
+              Need at least 2 players to start
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="text-pirate-parchment/40 text-sm relative z-10">
+          Waiting for the host to start the game...
+        </p>
+      )}
+
+      <button onClick={onLeave} className="mt-2 btn-parchment relative z-10">
         Leave
       </button>
     </div>
