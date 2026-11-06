@@ -11,6 +11,7 @@
     "backend": "bun --watch bin/server.ts",
     "deploy": "ansible-playbook ansible/deploy.yml -e deployment=production",
     "deploy:nginx": "ansible-playbook ansible/deploy-nginx.yml -e deployment=production",
+    "migrate": "bun scripts/migrate.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:update": "bun scripts/db-migrate.ts",

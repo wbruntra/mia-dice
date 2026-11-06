@@ -64,7 +64,7 @@
           when: not ansible_check_mode
 
         - name: Run migrations
-          command: bun x drizzle-kit migrate
+          command: bun run migrate
           args:
             chdir: '{{ project_root }}'
           changed_when: false
