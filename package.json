@@ -9,6 +9,8 @@
     "frontend": "cd frontend && bun run dev",
     "preact-frontend": "cd preact-frontend && bun run dev",
     "backend": "bun --watch bin/server.ts",
+    "deploy": "ansible-playbook ansible/deploy.yml -e deployment=production",
+    "deploy:nginx": "ansible-playbook ansible/deploy-nginx.yml -e deployment=production",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:update": "bun scripts/db-migrate.ts",

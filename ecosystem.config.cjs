@@ -2,10 +2,9 @@ module.exports = {
   apps: [
     {
       name: 'mia-backend',
-      script: 'bun',
-      args: 'run bin/server.ts',
+      script: 'bin/server.ts',
+      interpreter: 'bun',
       cwd: __dirname,
-      interpreter: 'none',
       watch: false,
       env: {
         NODE_ENV: 'production',

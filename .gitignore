@@ -39,3 +39,6 @@ cake-duel.db-wal
 secrets.js
 
 mexico.db*
+
+# ansible secrets bundles
+ansible/files/*/.env
