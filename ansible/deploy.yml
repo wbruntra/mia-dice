@@ -4,7 +4,9 @@
 - name: Deploy mia
   hosts: '{{ deployment | mandatory("Pass -e deployment=<profile>, e.g. -e deployment=production") }}'
   vars:
-    node_bin_dir: '/home/{{ ansible_user }}/.nvm/versions/node/{{ pm2_node_version }}/bin'
+    # pm2 is a global bun install (no node on the server); its shebang needs
+    # node, so run it through bun.
+    pm2: 'bun --bun /home/{{ ansible_user }}/.bun/bin/pm2'
     env_bundle: '{{ playbook_dir }}/files/{{ deployment }}/.env'
 
   tasks:
@@ -75,9 +77,6 @@
       tags: [build, frontend]
 
     - name: 6. Restart the app (pm2)
-      environment:
-        # pm2 lives under nvm, which a non-interactive shell doesn't put on PATH.
-        PATH: '{{ node_bin_dir }}:{{ ansible_env.PATH }}'
       block:
         - name: Recreate the pm2 process if its entry script changed
           # pm2 restart keeps a process's original script path, so a changed
@@ -85,9 +84,9 @@
           # delete and start.
           shell: |
             want="{{ project_root }}/$(bun -e "console.log(require('./ecosystem.config.cjs').apps[0].script)")"
-            have=$(pm2 jlist | bun -e "const l = await Bun.stdin.json(); console.log(l.find((a) => a.name === '{{ pm2_name }}')?.pm2_env.pm_exec_path ?? '')")
+            have=$({{ pm2 }} jlist | bun -e "const l = await Bun.stdin.json(); console.log(l.find((a) => a.name === '{{ pm2_name }}')?.pm2_env.pm_exec_path ?? '')")
             if [ -n "$have" ] && [ "$have" != "$want" ]; then
-              pm2 delete {{ pm2_name }} && echo "recreated: $have -> $want"
+              {{ pm2 }} delete {{ pm2_name }} && echo "recreated: $have -> $want"
             fi
           args:
             chdir: '{{ project_root }}'
@@ -95,12 +94,12 @@
           changed_when: "'recreated' in pm2_recreate.stdout"
 
         - name: Start or restart from ecosystem.config.cjs
-          command: pm2 startOrRestart ecosystem.config.cjs --update-env
+          command: '{{ pm2 }} startOrRestart ecosystem.config.cjs --update-env'
           args:
             chdir: '{{ project_root }}'
 
         - name: Persist the pm2 process list
-          command: pm2 save
+          command: '{{ pm2 }} save'
       tags: [pm2, restart]
 
     - name: 7. Verify the app answers on its port
